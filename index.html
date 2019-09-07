@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        svg {
+            /*outline: 1px solid red;*/
+            /*width: 100vw;*/
+            max-height: 100vh;
+            
+            /*min-width: 320px;*/
+            /*min-height: 320px;*/
+        }
+    </style>
+</head>
+<body>
+<svg></svg>
+<!-- <canvas></canvas> -->
+<!-- <canvas width="960" height="500"></canvas> -->
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://unpkg.com/topojson-client@3"></script>
+<script>
+var width = 500, height = 500;
+// var context = d3.select("canvas").node().getContext("2d");
+    // path = d3.geoPath(d3.geoOrthographic(), context);
+var svg = d3.select("svg").attr("viewBox", "0, 0, "+width+", "+height+"")
+// .attr("width", width).attr("height", height);
+var group = svg.append("svg:g");
+var projection = d3.geoOrthographic().scale(245).translate([width/2,height/2])
+// var projection = d3.geoEquirectangular().scale(245).translate([width/2,height/2])
+.clipAngle(90);
+var path = d3.geoPath().projection(projection);
+var colors = d3.scaleOrdinal(d3['schemeCategory20']);
+
+var zoom = d3.zoom()
+        // no longer in d3 v4 - zoom initialises with zoomIdentity, so it's already at origin
+        // .translate([0, 0]) 
+        // .scale(1) 
+        .scaleExtent([1, 9])
+        .on("zoom", onzoom);
+/* d3.json("test/IDL.geojson", function(dl) {
+  svg.selectAll("path").data(dl.features).enter().append("path").attr("d", path).attr("fill", "none").attr('stroke', 'black')
+}); */
+d3.json("world.topo.json", function(world) {
+  var countries = topojson.feature(world, world.objects.countries).features;
+  console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
+  // var pathRenderer = d3.geoPath().projection(projection);
+  var nodes = group.selectAll("g").data(countries).enter()
+    .append("g")
+    .attr("class", "node")
+    // .attr("transform", function(d, i) {
+      // console.log(d,i)/
+      // Set d.x and d.y here so that other elements can use it. d is 
+      // expected to be an object here.
+      // return "translate(" + d.x + "," + d.y + ")";
+    // });
+  // nodes.append("cirlce").attr("r", 20)
+  nodes
+  // .attr("width", width)
+  // .attr("height", height)
+  // .selectAll("path").data(countries)
+  // .enter()
+  .append("path")
+  .attr("d", path)
+  .attr("fill", function(d) {
+    return colors(d.properties.MAPCOLOR7)
+  })
+
+  nodes.append("text")
+    .attr("text-anchor", "middle")
+    .attr("class", "country-label")
+    .attr("x", function(d) {
+      return path.centroid(d)[0] || 0;
+    })
+    .attr("y", function(d) {
+      return path.centroid(d)[1] || 0;
+    })
+    .text(function(d) {
+      return "t"
+    })
+  // context.beginPath();
+  // path(topojson.mesh(world));
+  // context.stroke();
+});
+    // svg.call(zoom);
+// svg.on("mousedown", d=>{console.log(d3.event)})
+svg.call( /* 拖動事件在 SVG 元素上發生 */
+    d3.drag()
+      .subject(function() {
+        var r = projection.rotate(); /* 目前轉動的角度 ... */
+        return {x: r[0], y: -r[1]}; /* ... 做為這次拖動的起點 */
+        // console.log(d3.event)
+        // var pos = d3.event;
+        // return {x: d3.event.x, y: -d3.event.y}; /* ... 做為這次拖動的起點 */
+      })
+      .on("drag", function() {
+        // console.log(d3.event)
+        var r = projection.rotate();
+        /* 更新投影的角度 */
+        projection.rotate([d3.event.x, -d3.event.y, r[2]]);
+        // projection.rotate([d3.event.x-d3.event.subject.x, -d3.event.y+d3.event.subject.y, r[2]]);
+        /* 更新完投影後必須要重畫一遍地圖 */
+        d3.select("svg").selectAll("path").attr("d", path);
+        d3.select("svg").selectAll("text")
+          .attr("x", function(d) {return path.centroid(d)[0] || 0;})
+          .attr("y", function(d) {return path.centroid(d)[1] || 0;})
+      })
+  ).call(zoom);
+
+function onzoom() {
+    var r = projection.rotate();
+    // console.log(d3.event);
+    // var r = projection.rotate();
+    //     /* 更新投影的角度 */
+    //     projection.rotate([-d3.event.transform.x, -d3.event.transform.y, r[2]]);
+    //     /* 更新完投影後必須要重畫一遍地圖 */
+    //     d3.select("svg").selectAll("path").attr("d",path);
+    // var g = d3.selectAll('g');
+    // projection.scale(245*d3.event.transform.k)
+    // .rotate([d3.event.transform.x, -d3.event.transform.y, r[2]]);
+
+    // d3.select("svg").selectAll("path").attr("d",path);
+    // map.style("stroke-width", 1.5 / d3.event.transform.k + "px");
+    group.attr("transform", "translate("+d3.event.transform.x+","+d3.event.transform.y+")scale("+d3.event.transform.k+")"); // updated for d3 v4
+}
+
+</script>
+</body>
+</html>

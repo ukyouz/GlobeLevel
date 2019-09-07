@@ -19,24 +19,19 @@
 			position: absolute;
 			width: 100%;
 		}
-		#map svg {
-			filter: drop-shadow( 0px 0px 10px #eefdff);
-		}
+		
 		#map svg text {
 			user-select: none;
 			pointer-events: none;
 		}
 		body {
-			background: rgb(84, 132, 191);
-			background: radial-gradient(circle, rgba(240,255,255,1) 7%, rgba(90,130,173,1) 21%, rgba(27,34,80,1) 35%);
-			background-position: center;
+			background: #9dc3fb
 		}
 		.background {
 			fill: #9dc3fb;
 		}
 		.foreground {
 			fill: none;
-			stroke: #efffff;
 			stroke-width: 1px;
 			pointer-events: all;
 			cursor: -webkit-grab;
@@ -76,6 +71,17 @@
 			position: absolute;
 			bottom: 0;
 		}
+		.orthographic {
+			background: rgb(84, 132, 191);
+			background: radial-gradient(circle, rgba(240,255,255,1) 7%, rgba(90,130,173,1) 21%, rgba(27,34,80,1) 35%);
+			background-position: center;
+		}
+		.orthographic #map svg {
+			filter: drop-shadow( 0px 0px 10px #eefdff);
+		}
+		.foreground {
+			stroke: #efffff;
+		}
 	</style>
 </head>
 <body>
@@ -84,8 +90,36 @@
 		<!-- <h1>Rotate the World</h1> -->
 	</div>
 	<div class="footer">
-	<p class="caption">Drag to rotate the world. Scroll or pinch to zoom.</p>
-
+		<p class="caption">Drag to rotate the world. Scroll or pinch to zoom.</p>
+		<div class="controls">
+			<select name="projection" id="projection">
+				<option value="equirectangular">Equirectangular</option>
+				<option value="orthographic" selected>Orthographic</option>
+				<option value="albers">Albers</option>
+				<option value="august">August</option>
+				<option value="baker">Baker</option>
+				<option value="bonne">Bonne</option>
+				<!-- <option value="collignon">Collignon</option> -->
+				<option value="eckert1">Eckert I</option>
+				<!-- <option value="eckert2">Eckert II</option> -->
+				<option value="eckert3">Eckert III</option>
+				<!-- <option value="eckert4">Eckert IV</option> -->
+				<option value="eckert5">Eckert V</option>
+				<!-- <option value="eckert6">Eckert VI</option> -->
+				<option value="eisenlohr">Eisenlohr</option>
+				<option value="hammer">Hammer</option>
+				<option value="lagrange">Lagrange</option>
+				<option value="larrivee">Larrivée</option>
+				<!-- <option value="laskowski">Laskowski</option> -->
+				<option value="mercator">Mercator</option>
+				<option value="miller">Miller</option>
+				<option value="mollweide">Mollweide</option>
+				<option value="polyconic">Polyconic</option>
+				<option value="vanDerGrinten">van der Grinten</option>
+				<option value="vanDerGrinten4">van der Grinten IV</option>
+			</select>
+		</div>
+	</div>
 		<!-- <div class="wrapper">
   <p><a href="http://d3js.org">D3</a>’s geographic projections allow features to be rotated about <a href="http://bl.ocks.org/mbostock/4282586">three axes</a>.
   The three angles used are called <a href="http://en.wikipedia.org/wiki/Euler_angles">Euler angles</a>, and in D3 they specify the following sequence of rotations:
@@ -127,9 +161,10 @@
 </div> -->
 	</div>
 	<script src="js/d3.min.js"></script>
+	<script src="js/d3-queue.v3.min.js"></script>
+	<script src="js/d3-polygon.v1.min.js"></script>
 	<script src="js/d3.geo.projection.min.js"></script>
 	<script src="js/topojson.min.js"></script>
-	<script src="js/d3-polygon.v1.min.js"></script>
 	<!-- <script src="js/d3-array.v2.min.js"></script> -->
 	<script src="js/app.min.js"></script>
 </body>

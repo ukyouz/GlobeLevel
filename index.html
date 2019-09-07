@@ -40,9 +40,10 @@ var zoom = d3.zoom()
 /* d3.json("test/IDL.geojson", function(dl) {
   svg.selectAll("path").data(dl.features).enter().append("path").attr("d", path).attr("fill", "none").attr('stroke', 'black')
 }); */
-d3.json("world.topo.json", function(world) {
+d3.json("test/world/50m.json", function(world) {
+  console.log(world)
   var countries = topojson.feature(world, world.objects.countries).features;
-  console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
+  // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
   // var pathRenderer = d3.geoPath().projection(projection);
   var nodes = group.selectAll("g").data(countries).enter()
     .append("g")
@@ -62,7 +63,7 @@ d3.json("world.topo.json", function(world) {
   .append("path")
   .attr("d", path)
   .attr("fill", function(d) {
-    return colors(d.properties.MAPCOLOR7)
+    return colors(d.id)
   })
 
   nodes.append("text")
@@ -75,7 +76,7 @@ d3.json("world.topo.json", function(world) {
       return path.centroid(d)[1] || 0;
     })
     .text(function(d) {
-      return "t"
+      return d.id;
     })
   // context.beginPath();
   // path(topojson.mesh(world));

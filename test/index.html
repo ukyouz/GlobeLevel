@@ -31,7 +31,7 @@
 			fill: #9dc3fb;
 		}
 		.foreground {
-			fill: none;
+			fill: url(#shadow);
 			stroke-width: 1px;
 			pointer-events: all;
 			cursor: -webkit-grab;
@@ -63,6 +63,8 @@
 			text-anchor: middle;
 			font-family: Roboto, Arial, sans-serif;
 			font-size: 12px;
+			fill: #111;
+			text-shadow: 0 0 4px #fff;
 		}
 		.point {
 			fill: #f00;
@@ -73,7 +75,7 @@
 		}
 		.orthographic {
 			background: rgb(84, 132, 191);
-			background: radial-gradient(circle, rgba(240,255,255,1) 7%, rgba(90,130,173,1) 21%, rgba(27,34,80,1) 35%);
+			background: radial-gradient(circle, rgb(255, 255, 255) 5.7%,rgb(243, 255, 252) 6%, rgb(224, 254, 255) 7.1%,rgb(206, 241, 255) 8.4%,rgb(133, 173, 222) 14%, rgb(0, 6, 37) 35%);
 			background-position: center;
 		}
 		.orthographic #map svg {
@@ -95,7 +97,7 @@
 			<select name="projection" id="projection">
 				<option value="equirectangular">Equirectangular</option>
 				<option value="orthographic" selected>Orthographic</option>
-				<option value="albers">Albers</option>
+				<!-- <option value="albers">Albers</option> -->
 				<option value="august">August</option>
 				<option value="baker">Baker</option>
 				<option value="bonne">Bonne</option>
@@ -154,7 +156,7 @@
 		<!-- <div class="wrapper">
   <h2>Animated Zooming</h2>
   <p>See <a href="../zoom/">Animated World Zoom</a>.
-
+	https://www.jasondavies.com/maps/rotate/
   <h2>Notes</h2>
   <p>I used <a href="http://en.wikipedia.org/wiki/Versor">versors</a> (unit quaternions) to accumulate the 3D rotation during a gesture, as they can be easily converted to and from <a href="http://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation">axis-angle representations</a>.
   <p class="caption">Data: Natural Earth <a href="http://www.naturalearthdata.com/downloads/110m-cultural-vectors/">1:110m Cultural Vectors</a>

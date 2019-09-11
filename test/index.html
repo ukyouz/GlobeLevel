@@ -29,17 +29,17 @@
 			cursor: -webkit-grab;
 			cursor: -moz-grab;
 		}
-		.background {
-			fill: #9dc3fb;
-		}
-		.foreground {
-			fill: url(#shadow);
-			/* stroke-width: 1px; */
-			/* pointer-events: all; */
-		}
-		.foreground.zooming {
+		svg.zooming {
 			cursor: -webkit-grabbing;
 			cursor: -moz-grabbing;
+		}
+		.background {
+			/* fill: #9dc3fb; */
+		}
+		.foreground {
+			/* fill: url(#shadow); */
+			/* stroke-width: 1px; */
+			/* pointer-events: all; */
 		}
 		.international-date-line,
 		.graticule {
@@ -60,11 +60,10 @@
 			/* fill: none; */
 		}
 		.country-label {
-			text-anchor: middle;
+			/* text-anchor: middle; */
 			font-family: Roboto, Arial, sans-serif;
-			font-size: 12px;
-			fill: #111;
-			text-shadow: 0 0 4px #fff;
+			/* fill: #111; */
+			/* text-shadow: 0 0 4px #fff; */
 		}
 		.point {
 			fill: #f00;
@@ -163,6 +162,7 @@
 </div> -->
 	</div>
 	<script src="js/d3.min.js"></script>
+	<script src="https://d3js.org/d3-quadtree.v1.min.js"></script>
 	<script src="js/d3-queue.v3.min.js"></script>
 	<script src="js/d3-polygon.v1.min.js"></script>
 	<script src="js/d3.geo.projection.min.js"></script>

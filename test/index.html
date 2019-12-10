@@ -33,6 +33,15 @@
 			cursor: -webkit-grabbing;
 			cursor: -moz-grabbing;
 		}
+		canvas {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			width: 100%;
+			height: 100%;
+		}
 		.background {
 			/* fill: #9dc3fb; */
 		}
@@ -88,6 +97,7 @@
 <body>
 	<!-- <p class="breadcrumbs"><a href="http://www.jasondavies.com/">Jason Davies</a> → <a href="../">Maps</a> -->
 	<div id="map">
+		<canvas></canvas>
 		<!-- <h1>Rotate the World</h1> -->
 	</div>
 	<div class="footer">

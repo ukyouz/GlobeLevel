@@ -1,15 +1,33 @@
 [CodePen Test](https://codepen.io/zhung/pen/GRKdJZG?editors=1010)
 
-## Tools
+## Concept
 
-1. [CSV to GeoJSON](http://www.convertcsv.com/csv-to-geojson.htm)
-2. [geojson editor](geojson.io)
+Based on the JapanEx and TaiwanEx project, I decided to make a global version. However, everything goes much more complicated than I think as diving into this project, as, apparently, the area I need to cover for whole world is much larger than that for a single country. Secondly, the credit score is now calculated by a country unit instead of a county equivalent unit, so the game can still be fun and easy to play. Even though, the number of territory layers is large. In previous two projects, the maps for Japan and Taiwan are re-drawn with Illustrator, and there are only 47 and 24 counties for Japan and Taiwan respectively, so maybe I should draw a world map like before, uh, for just only 241 countries … uh that’s a lot, and I have to figure out how to arrange them all in proper positions, trying not to lose too much their original boundary shapes. Finally I turn to use the open-sourced world map GeoJSON file.
+
+## Design
+
+To make area outside the Earth draggable, the projection for dragging and that for rendering are different.
+
+## Data Sources
+
+1. [World Atlas TopoJSON](https://github.com/topojson/world-atlas)
+2. [World countries](https://github.com/stefangabos/world_countries)
+3. [Chinese country names](https://gist.github.com/jacobbubu/060d84c2bdf005d412db)
+4. [International Date Line Longitude, Latitude Coordinates](https://ithoughthecamewithyou.com/post/international-date-line-longitude-latitude-coordinates)
 
 ## References
 
-1. [d3-quadtree](https://github.com/d3/d3-quadtree)
+1. [D3 API Reference](https://github.com/d3/d3/blob/master/API.md)
+2. [D3 Quadtree](https://github.com/d3/d3-quadtree)
+3. [Rotate the World - Jason Davies](https://www.jasondavies.com/maps/rotate/)
+4. [Orthographic Zoom III](https://bl.ocks.org/curran/0bb64d8f56042e2480c908b0985f063b)
+5. [Collision Detection](https://bl.ocks.org/mbostock/3231298)
+6. [Circles on an Axis in a Static Force Layout](http://bl.ocks.org/ericandrewlewis/dc79d22c74b8046a5512)
+7. [Visited: Map where I've been](https://apps.apple.com/us/app/visited-map-where-ive-been/id846983349)
 
-### Collision Detection
+## Useful Tools
 
-1. [Collision Detection](https://bl.ocks.org/mbostock/3231298)
-2. [Circles on an Axis in a Static Force Layout](http://bl.ocks.org/ericandrewlewis/dc79d22c74b8046a5512)
+1. [CSV to GeoJSON](http://www.convertcsv.com/csv-to-geojson.htm)
+2. [GeoJSON Editor](http://geojson.io)
+3. [Mapshaper](https://mapshaper.org)
+

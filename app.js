@@ -1,0 +1,114 @@
+var width = 500, height = 500;
+// var context = d3.select("canvas").node().getContext("2d");
+// path = d3.geoPath(d3.geoOrthographic(), context);
+var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
+// .attr("width", width).attr("height", height);
+var group = svg.append("svg:g");
+var projection = d3.geoOrthographic().scale(245).translate([width / 2, height / 2])
+    // var projection = d3.geoEquirectangular().scale(245).translate([width/2,height/2])
+    .clipAngle(90);
+var path = d3.geoPath().projection(projection);
+var colors = d3.scaleOrdinal(d3['schemeCategory20']);
+
+var zoom = d3.zoom()
+    // no longer in d3 v4 - zoom initialises with zoomIdentity, so it's already at origin
+    // .translate([0, 0])
+    // .scale(1)
+    .scaleExtent([1, 9])
+    .on("zoom", onzoom);
+/* d3.json("test/IDL.geojson", function(dl) {
+  svg.selectAll("path").data(dl.features).enter().append("path").attr("d", path).attr("fill", "none").attr('stroke', 'black')
+}); */
+d3.json("test/map.topojson", function (world) {
+    console.log(world)
+    var countries = topojson.feature(world, world.objects.collection);
+    // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
+    // var pathRenderer = d3.geoPath().projection(projection);
+    var nodes = group.selectAll("g").data(countries.features).enter()
+        .append("g")
+        .attr("class", "node")
+    // .attr("transform", function(d, i) {
+    // console.log(d,i)/
+    // Set d.x and d.y here so that other elements can use it. d is
+    // expected to be an object here.
+    // return "translate(" + d.x + "," + d.y + ")";
+    // });
+    // nodes.append("cirlce").attr("r", 20)
+    nodes
+        // .attr("width", width)
+        // .attr("height", height)
+        // .selectAll("path").data(countries)
+        // .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("id", function (d) {
+            return d.id;
+        })
+        .attr("stroke", "black")
+        .attr("stroke-linejoin", "round")
+        .attr("fill", function (d, i) {
+            return colors(i)
+        })
+
+    nodes.append("text")
+        .attr("text-anchor", "middle")
+        .attr("class", "country-label")
+        .attr("x", function (d) {
+            return path.centroid(d)[0] || 0;
+        })
+        .attr("y", function (d) {
+            return path.centroid(d)[1] || 0;
+        })
+        .text(function (d) {
+            return d.id;
+        })
+    //context.beginPath();
+    // path(topojson.mesh(world));
+    // context.stroke();
+});
+// svg.call(zoom);
+// svg.on("mousedown", d=>{console.log(d3.event)})
+svg.call(d3.drag()
+    .on("start", dragstart)
+    .on("drag", dragging)
+);
+var v0, r0, q0;
+function dragstart() {
+    v0 = versor.cartesian(projection.invert(d3.mouse(this)));
+    r0 = projection.rotate();
+    q0 = versor(r0);
+}
+function dragging() {
+    var v1 = versor.cartesian(projection.rotate(r0).invert(d3.mouse(this))),
+        q1 = versor.multiply(q0, versor.delta(v0, v1)),
+        r1 = versor.rotation(q1);
+
+    projection.rotate(r1);
+
+    svg.selectAll("path").attr("d", path);
+    svg.selectAll("text")
+        .attr("x", function (d) {
+            return path.centroid(d)[0] || 0;
+        })
+        .attr("y", function (d) {
+            return path.centroid(d)[1] || 0;
+        });
+}
+
+svg.call(zoom);
+function onzoom() {
+    var r = projection.rotate();
+    // console.log(d3.event);
+    // var r = projection.rotate();
+    //     /* 更新投影的角度 */
+    //     projection.rotate([-d3.event.transform.x, -d3.event.transform.y, r[2]]);
+    //     /* 更新完投影後必須要重畫一遍地圖 */
+    //     d3.select("svg").selectAll("path").attr("d",path);
+    // var g = d3.selectAll('g');
+    // projection.scale(245*d3.event.transform.k)
+    // .rotate([d3.event.transform.x, -d3.event.transform.y, r[2]]);
+
+    // d3.select("svg").selectAll("path").attr("d",path);
+    // map.style("stroke-width", 1.5 / d3.event.transform.k + "px");
+    group.attr("transform", "translate(" + d3.event.transform.x + "," + d3.event.transform.y + ")scale(" + d3.event.transform.k + ")"); // updated for d3 v4
+}

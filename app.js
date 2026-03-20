@@ -4,7 +4,8 @@ var width = 500, height = 500;
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
-var projection = d3.geoOrthographic().scale(245).translate([width / 2, height / 2])
+const INIT_SCALE = 200;
+var projection = d3.geoOrthographic().scale(INIT_SCALE).translate([width / 2, height / 2])
 // var projection = d3.geoEquirectangular().scale(245).translate([width/2,height/2])
     .clipAngle(90);
 var path = d3.geoPath().projection(projection);
@@ -12,6 +13,14 @@ var colors = d3.scaleOrdinal(d3['schemeCategory20']);
 
 d3.json("test/map.topojson", function (world) {
     console.log(world)
+
+    // Ocean (sphere background)
+    group.append("path")
+        .datum({type: "Sphere"})
+        .attr("class", "sphere")
+        .attr("d", path)
+        .attr("fill", "#9EC3FB");
+
     var countries = topojson.feature(world, world.objects.collection);
     // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
     // var pathRenderer = d3.geoPath().projection(projection);
@@ -109,25 +118,20 @@ var zoom = d3.zoom()
     .on("zoom", onzoom);
 
 svg.call(zoom);
+var lastZoomK = 1;
 function onzoom() {
-    var r = projection.rotate();
-    // console.log(d3.event);
-    // var r = projection.rotate();
-    //     /* 更新投影的角度 */
-    //     projection.rotate([-d3.event.transform.x, -d3.event.transform.y, r[2]]);
-    //     /* 更新完投影後必須要重畫一遍地圖 */
-    //     d3.select("svg").selectAll("path").attr("d",path);
-    // var g = d3.selectAll('g');
-    // projection.scale(245*d3.event.transform.k)
-    // .rotate([d3.event.transform.x, -d3.event.transform.y, r[2]]);
+    var s = projection.scale() * d3.event.transform.k / lastZoomK;
+    lastZoomK = d3.event.transform.k;
+    projection.scale(Math.max(INIT_SCALE, Math.min(s, 2500)));
 
-    // d3.select("svg").selectAll("path").attr("d",path);
-    // map.style("stroke-width", 1.5 / d3.event.transform.k + "px");
-    group.attr("transform", "translate(" + d3.event.transform.x + "," + d3.event.transform.y + ")scale(" + d3.event.transform.k + ")"); // updated for d3 v4
-    // Keep font size constant visually
+    // Do not apply d3.zoom's mouse-relative transform — redraw centered via projection
+    group.attr("transform", null);
+    draw();
+
+    // Scale font size inversely with projection scale so labels stay readable
+    var relScale = projection.scale() / INIT_SCALE;
     svg.selectAll("text.place-label")
-        .style("font-size", Math.max(4, (8 / d3.event.transform.k)) + "px");
-    // console.log("zoom", d3.event.transform.k);
+        .style("font-size", Math.max(4, 8 / Math.pow(relScale, 0.1)) + "px");
     arrangeLabels();
 }
 

@@ -4,11 +4,64 @@ var width = 500, height = 500;
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
-const INIT_SCALE = 200;
-var projection = d3.geoOrthographic().scale(INIT_SCALE).translate([width / 2, height / 2])
-// var projection = d3.geoEquirectangular().scale(245).translate([width/2,height/2])
-    .clipAngle(90);
+const INIT_SCALE = 100;
+const PROJECTIONS = [
+    { name: 'Orthographic', object: d3.geoOrthographic().clipAngle(90), scale: INIT_SCALE },
+    { name: 'Natural Earth', object: d3.geoNaturalEarth1(),             scale: INIT_SCALE },
+    { name: 'Equirectangular', object: d3.geoEquirectangular(),         scale: INIT_SCALE },
+    { name: 'Mercator',      object: d3.geoMercator(),                  scale: INIT_SCALE },
+    { name: 'Stereographic', object: d3.geoStereographic().clipAngle(179), scale: INIT_SCALE },
+];
+var projectionIndex = 0;
+var projection = PROJECTIONS[0].object.scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
+
+// For MultiPolygon features, centroid may fall outside all polygons (e.g. USA, Russia).
+// Find the largest sub-polygon, compute its geographic centroid, then project that
+// single point — more robust than path.centroid() which averages projected SVG coords
+// and breaks across antimeridian or under heavy projection distortion.
+function getLabelCentroid(d) {
+    if (!d || !d.geometry) return [NaN, NaN];
+    var feature = d;
+    if (d.geometry.type === 'MultiPolygon') {
+        var largest = null, largestArea = 0;
+        d.geometry.coordinates.forEach(function(coords) {
+            var poly = { type: 'Feature', geometry: { type: 'Polygon', coordinates: coords } };
+            var a = d3.geoArea(poly);
+            if (a > largestArea) { largestArea = a; largest = poly; }
+        });
+        if (largest) feature = largest;
+    }
+    if (projection == PROJECTIONS[0].object) {
+        return path.centroid(feature);       // geographic [lon, lat] — projection-independent
+    }
+    var geo = d3.geoCentroid(feature);       // geographic [lon, lat] — projection-independent
+    return projection(geo) || [NaN, NaN];    // null when clipped (back hemisphere)
+}
+
+function resetNorthUp() {
+    var r = projection.rotate();
+    projection.rotate([r[0], r[1], 0]); // keep current longitude, reset tilt and roll
+    draw();
+    arrangeLabels();
+    repositionPopup();
+}
+
+function switchProjection(index) {
+    projectionIndex = +index;
+    var config = PROJECTIONS[projectionIndex];
+    var rotate = projection.rotate();
+    config.object
+        .scale(projection.scale())
+        .translate(projection.translate())
+        .rotate(projection.rotate());
+    path.projection(config.object);
+    projection = config.object
+    // lastZoomK = 1;
+    draw();
+    arrangeLabels();
+    repositionPopup();
+}
 var colors = d3.scaleOrdinal(d3['schemeCategory20']);
 
 const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
@@ -147,7 +200,7 @@ d3.json("test/map.topojson", function (world) {
     });
     nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
     .append("text").each(function(d) {
-        const center = path.centroid(d);
+        const center = getLabelCentroid(d);
         d3.select(this)
         .attr("class", "place-label")
         .attr("text-anchor", "middle")
@@ -177,6 +230,7 @@ svg.call(d3.drag()
         svg.attr("class", null);
         arrangeLabels();
         // inertia.start();
+        console.log(projection.rotate())
     })
 );
 var v0, r0, q0;
@@ -204,12 +258,14 @@ function dragging() {
 
 function draw() {
     svg.selectAll("path").attr("d", path);
-    svg.selectAll("text")
+    svg.selectAll("text.place-label")
         .attr("x", function (d) {
-            return path.centroid(d)[0] || 0;
+            var c = getLabelCentroid(d);
+            return isNaN(c[0]) ? 0 : c[0];
         })
         .attr("y", function (d) {
-            return path.centroid(d)[1] || 0;
+            var c = getLabelCentroid(d);
+            return isNaN(c[1]) ? 0 : c[1];
         });
     // arrangeLabels();
 }
@@ -255,8 +311,10 @@ function arrangeLabels() {
     var shown = [];
     svg.selectAll("text.place-label")
         .style("display", function(d) {
-            var geo = path.centroid(d);
+
+            var geo = getLabelCentroid(d);
             if (isNaN(geo[0])) return "none";
+
             var b = this.getBBox();
             for (var i = 0; i < shown.length; i++) {
                 var s = shown[i];

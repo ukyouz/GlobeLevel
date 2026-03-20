@@ -19,6 +19,8 @@
             cursor: grab;
             cursor: -moz-grab;
             cursor: -webkit-grab;
+
+            user-select: none;
         }
         svg.dragging {
             cursor: grabbing;
@@ -31,10 +33,99 @@
         text.place-label {
             text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
         }
+
+        .form {
+        background: #fff;
+        border: 1px solid #aaa;
+        border-radius: 6px;
+        max-width: 300px;
+        position: fixed;
+        top: 100;
+        overflow: hidden;
+        -webkit-transition: opacity 0.3s;
+        transition: opacity 0.3s;
+        display: none;
+        user-select: none;
+        }
+        .form.show {
+        opacity: 1;
+        z-index: 99;
+        }
+        .form .title {
+        background: #efefef;
+        padding: 4px 1em;
+        }
+        [lang="en"] .form .title {
+        padding-right: 70px;
+        }
+        .form .title .lang {
+        font-weight: 600;
+        margin-left: 2px;
+        }
+        .form .title .icon-group {
+        position: absolute;
+        right: 0;
+        top: 0;
+        padding: 0 12px;
+        }
+        .form .title .icon-group .icon {
+        line-height: 30px;
+        padding: 0px 6px;
+        color: #bbb;
+        cursor: pointer;
+        display: block;
+        float: left;
+        text-decoration: none;
+        transition: color 0.3s;
+        }
+        .form .title .icon-group .icon.search:hover {
+        color: #3e6ffe;
+        }
+        .form .title .icon-group .icon.close:hover {
+        color: #666;
+        }
+        .form .label {
+        font-weight: normal;
+        padding: 4px 1em;
+        cursor: pointer;
+        display: block;
+        -webkit-transition: background 0.2s;
+        transition: background 0.2s;
+        }
+        .form .label:hover, .form .label.selected {
+        background: #eaeaea;
+        }
+        .form .label.red:hover, .form .label.red.selected {
+        background: #e84c3d;
+        }
+        .form .label.orange:hover, .form .label.orange.selected {
+        background: #d58337;
+        }
+        .form .label.green:hover, .form .label.green.selected {
+        background: #30cc70;
+        }
+        .form .label.yellow:hover, .form .label.yellow.selected {
+        background: #f3c218;
+        }
+        .form .label.blue:hover, .form .label.blue.selected {
+        background: #3598db;
+        }
+
     </style>
 </head>
 <body>
 <svg></svg>
+<div class="form" id="form">
+    <div class="title">
+        @<span class="lang place-name">地點</span>
+        <div class="icon-group">
+            <a class="fa fa-search icon search" href="#" title target="_blank"></a>
+            <span class="fa fa-times icon close" id="close"></span>
+        </div>
+    </div>
+    <div class="spots"></div>
+    <!-- <label v-for="level in d.form" class="label lang level" :id="current_city+'-'+level.level" :class="level.color" :data-value="level.level" v-text="level.description"/></label> -->
+</div>
 <!-- <canvas></canvas> -->
 <!-- <canvas width="960" height="500"></canvas> -->
 <script src="https://d3js.org/d3.v4.min.js"></script>

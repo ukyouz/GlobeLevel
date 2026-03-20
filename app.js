@@ -11,6 +11,102 @@ var projection = d3.geoOrthographic().scale(INIT_SCALE).translate([width / 2, he
 var path = d3.geoPath().projection(projection);
 var colors = d3.scaleOrdinal(d3['schemeCategory20']);
 
+const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
+const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
+const levelTexts = [
+    "Never been there",
+    "Passed there",
+    "Alighted there",
+    "Visited there",
+    "Stayed there",
+    "Lived there",
+]
+var countryLevels = {};
+
+// --- Popup ---
+var activeCountryId = null;
+var activeGeoCentroid = null; // geographic centroid of the active country, stable across zoom
+var featureById = {};         // populated after topojson loads
+
+function svgToClient(svgX, svgY) {
+    var pt = svg.node().createSVGPoint();
+    pt.x = svgX;
+    pt.y = svgY;
+    var screen = pt.matrixTransform(svg.node().getScreenCTM());
+    return { x: screen.x, y: screen.y };
+}
+
+function clientToGeo(clientX, clientY) {
+    var pt = svg.node().createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    var svgPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
+    return projection.invert([svgPt.x, svgPt.y]);
+}
+
+function repositionPopup() {
+    if (!activeGeoCentroid || popup.style("display") === "none") return;
+    var projected = projection(activeGeoCentroid);
+    if (!projected) return; // country rotated to back hemisphere
+    var client = svgToClient(projected[0], projected[1]);
+    popup.style("left", client.x + "px")
+         .style("top",  client.y + "px");
+}
+
+var popup = d3.select("#form");
+popup.append("div").attr("class", "popup-title");
+var levelBtns = popup.selectAll(".level-btn")
+    .data(levelColorNames).enter()
+    .append("label")
+    .attr("class", (d) => `label lang level ${d}`)
+    .text(function(d, i) { return levelTexts[i]; })
+    .on("click", function(d, i) {
+        d3.event.stopPropagation();
+        setCountryLevel(activeCountryId, i);
+        hidePopup();
+    });
+
+function showPopup(id, clientX, clientY) {
+    activeCountryId = id;
+    activeGeoCentroid = clientToGeo(clientX, clientY);
+    popup.select(".place-name").text(id);
+    popup.selectAll(".level-btn")
+        .classed("current", function(d, i) { return i === (countryLevels[id] || 0); });
+    popup.style("display", "block")
+        .style("left", clientX + "px")
+        .style("top",  clientY + "px");
+}
+function hidePopup() {
+    popup.style("display", "none");
+    activeCountryId = null;
+    activeGeoCentroid = null;
+}
+function setCountryLevel(id, level) {
+    if (!id) return;
+    countryLevels[id] = level;
+    svg.selectAll(".node path").filter(function(d) { return d.id === id; })
+        .attr("fill", levelColors[level]);
+}
+
+d3.select(document).on("click", hidePopup);
+
+// Make popup draggable by its title bar
+var popupNode = document.getElementById("form");
+var popupDragOffset = null;
+
+function onPopupDragStart(clientX, clientY) {
+    if (!activeCountryId) return;
+    console.log(clientX, clientY)
+    var rect = popupNode.getBoundingClientRect();
+    popupDragOffset = { x: clientX - rect.left, y: clientY - rect.top };
+};
+function onPopupDragging(clientX, clientY) {
+    if (!activeCountryId) return;
+    if (!popupDragOffset) return;
+    popupNode.style.left = (clientX - popupDragOffset.x) + "px";
+    popupNode.style.top  = (clientY - popupDragOffset.y) + "px";
+}
+
 d3.json("test/map.topojson", function (world) {
     console.log(world)
 
@@ -22,6 +118,7 @@ d3.json("test/map.topojson", function (world) {
         .attr("fill", "#9EC3FB");
 
     var countries = topojson.feature(world, world.objects.collection);
+    countries.features.forEach(function(f) { featureById[f.id] = f; });
     // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
     // var pathRenderer = d3.geoPath().projection(projection);
     var nodes = group.append("g").selectAll("g").data(countries.features).enter()
@@ -37,8 +134,11 @@ d3.json("test/map.topojson", function (world) {
         })
         .attr("stroke", "black")
         .attr("stroke-linejoin", "round")
-        .attr("fill", function (d, i) {
-            return colors(i)
+        .attr("fill", "#fff")
+        .on("click", function(d) {
+            if (d3.event.defaultPrevented) return;
+            d3.event.stopPropagation();
+            showPopup(d.id, d3.event.pageX, d3.event.pageY);
         })
 
     // country labels — sorted by area descending so larger countries have higher priority
@@ -46,20 +146,25 @@ d3.json("test/map.topojson", function (world) {
         return d3.geoArea(b) - d3.geoArea(a);
     });
     nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
-    .append("text")
+    .append("text").each(function(d) {
+        const center = path.centroid(d);
+        d3.select(this)
         .attr("class", "place-label")
         .attr("text-anchor", "middle")
         .attr("font-size", "8px")
-        .attr("x", function (d) {
-            return path.centroid(d)[0] || 0;
-        })
-        .attr("y", function (d) {
-            return path.centroid(d)[1] || 0;
-        })
+        .style("display", isNaN(center[0]) ? "none": null)
+        .attr("x", center[0] || 0)
+        .attr("y", center[1] || 0)
         .text(function (d) {
             return d.id;
         })
+        .on("click", function(d) {
+            if (d3.event.defaultPrevented) return;
+            d3.event.stopPropagation();
+            showPopup(d.id, d3.event.pageX, d3.event.pageY);
+        })
         // .call(wrap, 60)
+    })
     arrangeLabels();
 });
 
@@ -76,18 +181,24 @@ svg.call(d3.drag()
 );
 var v0, r0, q0;
 function dragstart() {
-    v0 = versor.cartesian(projection.invert(d3.mouse(this)));
+    const mousePos = d3.mouse(this);
+    v0 = versor.cartesian(projection.invert(mousePos));
     r0 = projection.rotate();
     q0 = versor(r0);
     svg.attr("class", "dragging");
+    var e = d3.event.sourceEvent;
+    onPopupDragStart(e.clientX, e.clientY);
 }
 function dragging() {
-    var v1 = versor.cartesian(projection.rotate(r0).invert(d3.mouse(this))),
+    const mousePos = d3.mouse(this);
+    var v1 = versor.cartesian(projection.rotate(r0).invert(mousePos)),
         q1 = versor.multiply(q0, versor.delta(v0, v1)),
         r1 = versor.rotation(q1);
 
     projection.rotate(r1);
     draw();
+    var e = d3.event.sourceEvent;
+    onPopupDragging(e.clientX, e.clientY);
 }
 
 
@@ -133,6 +244,7 @@ function onzoom() {
     svg.selectAll("text.place-label")
         .style("font-size", Math.max(4, 8 / Math.pow(relScale, 0.1)) + "px");
     arrangeLabels();
+    repositionPopup();
 }
 
 
@@ -143,10 +255,8 @@ function arrangeLabels() {
     var shown = [];
     svg.selectAll("text.place-label")
         .style("display", function(d) {
-            // Hide labels for countries on the back hemisphere (centroid not projected)
-            var geo = d3.geoCentroid(d);
-            if (projection(geo) === null) return "none";
-
+            var geo = path.centroid(d);
+            if (isNaN(geo[0])) return "none";
             var b = this.getBBox();
             for (var i = 0; i < shown.length; i++) {
                 var s = shown[i];

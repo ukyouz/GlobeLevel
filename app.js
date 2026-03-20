@@ -32,8 +32,11 @@ d3.json("test/map.topojson", function (world) {
             return colors(i)
         })
 
-    // country labels
-    nodes = group.append("g").selectAll("g").data(countries.features).enter()
+    // country labels — sorted by area descending so larger countries have higher priority
+    var sortedFeatures = countries.features.slice().sort(function(a, b) {
+        return d3.geoArea(b) - d3.geoArea(a);
+    });
+    nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
     .append("text")
         .attr("class", "place-label")
         .attr("text-anchor", "middle")
@@ -48,7 +51,7 @@ d3.json("test/map.topojson", function (world) {
             return d.id;
         })
         // .call(wrap, 60)
-    arrangeLbaels();
+    arrangeLabels();
 });
 
 
@@ -58,6 +61,7 @@ svg.call(d3.drag()
     .on("drag", dragging)
     .on("end", function () {
         svg.attr("class", null);
+        arrangeLabels();
         // inertia.start();
     })
 );
@@ -124,25 +128,31 @@ function onzoom() {
     svg.selectAll("text.place-label")
         .style("font-size", Math.max(4, (8 / d3.event.transform.k)) + "px");
     // console.log("zoom", d3.event.transform.k);
-    // arrangeLabels();
+    arrangeLabels();
 }
 
 
 function arrangeLabels() {
+    // Reset all to visible first — getBBox() throws on display:none elements in Chrome
+    svg.selectAll("text.place-label").style("display", null);
+
     var shown = [];
     svg.selectAll("text.place-label")
-        .style("display", function() {
-            var thisBox = this.getBBox();
+        .style("display", function(d) {
+            // Hide labels for countries on the back hemisphere (centroid not projected)
+            var geo = d3.geoCentroid(d);
+            if (projection(geo) === null) return "none";
+
+            var b = this.getBBox();
             for (var i = 0; i < shown.length; i++) {
-                var otherBox = shown[i];
-                if (!(thisBox.x + thisBox.width < otherBox.x ||
-                      thisBox.x > otherBox.x + otherBox.width ||
-                      thisBox.y + thisBox.height < otherBox.y ||
-                      thisBox.y > otherBox.y + otherBox.height)) {
-                    return "none"; // Hide if overlaps
+                var s = shown[i];
+                if (b.x < s.x + s.width && b.x + b.width > s.x &&
+                    b.y < s.y + s.height && b.y + b.height > s.y) {
+                    return "none"; // Hide if overlaps a higher-priority label
                 }
             }
-            shown.push(thisBox);
-            return "block"; // Show if no overlap
+            // Store a plain object copy (not a live DOMRect)
+            shown.push({ x: b.x, y: b.y, width: b.width, height: b.height });
+            return null; // Show (remove inline style override)
         });
 }

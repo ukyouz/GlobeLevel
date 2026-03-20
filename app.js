@@ -5,40 +5,22 @@ var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + ""
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
 var projection = d3.geoOrthographic().scale(245).translate([width / 2, height / 2])
-    // var projection = d3.geoEquirectangular().scale(245).translate([width/2,height/2])
+// var projection = d3.geoEquirectangular().scale(245).translate([width/2,height/2])
     .clipAngle(90);
 var path = d3.geoPath().projection(projection);
 var colors = d3.scaleOrdinal(d3['schemeCategory20']);
 
-var zoom = d3.zoom()
-    // no longer in d3 v4 - zoom initialises with zoomIdentity, so it's already at origin
-    // .translate([0, 0])
-    // .scale(1)
-    .scaleExtent([1, 9])
-    .on("zoom", onzoom);
-/* d3.json("test/IDL.geojson", function(dl) {
-  svg.selectAll("path").data(dl.features).enter().append("path").attr("d", path).attr("fill", "none").attr('stroke', 'black')
-}); */
 d3.json("test/map.topojson", function (world) {
     console.log(world)
     var countries = topojson.feature(world, world.objects.collection);
     // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
     // var pathRenderer = d3.geoPath().projection(projection);
-    var nodes = group.selectAll("g").data(countries.features).enter()
+    var nodes = group.append("g").selectAll("g").data(countries.features).enter()
         .append("g")
         .attr("class", "node")
-    // .attr("transform", function(d, i) {
-    // console.log(d,i)/
-    // Set d.x and d.y here so that other elements can use it. d is
-    // expected to be an object here.
-    // return "translate(" + d.x + "," + d.y + ")";
-    // });
-    // nodes.append("cirlce").attr("r", 20)
+
+    // countries
     nodes
-        // .attr("width", width)
-        // .attr("height", height)
-        // .selectAll("path").data(countries)
-        // .enter()
         .append("path")
         .attr("d", path)
         .attr("id", function (d) {
@@ -50,9 +32,12 @@ d3.json("test/map.topojson", function (world) {
             return colors(i)
         })
 
-    nodes.append("text")
+    // country labels
+    nodes = group.append("g").selectAll("g").data(countries.features).enter()
+    .append("text")
+        .attr("class", "place-label")
         .attr("text-anchor", "middle")
-        .attr("class", "country-label")
+        .attr("font-size", "8px")
         .attr("x", function (d) {
             return path.centroid(d)[0] || 0;
         })
@@ -62,21 +47,26 @@ d3.json("test/map.topojson", function (world) {
         .text(function (d) {
             return d.id;
         })
-    //context.beginPath();
-    // path(topojson.mesh(world));
-    // context.stroke();
+        // .call(wrap, 60)
+    arrangeLbaels();
 });
-// svg.call(zoom);
-// svg.on("mousedown", d=>{console.log(d3.event)})
+
+
+
 svg.call(d3.drag()
     .on("start", dragstart)
     .on("drag", dragging)
+    .on("end", function () {
+        svg.attr("class", null);
+        // inertia.start();
+    })
 );
 var v0, r0, q0;
 function dragstart() {
     v0 = versor.cartesian(projection.invert(d3.mouse(this)));
     r0 = projection.rotate();
     q0 = versor(r0);
+    svg.attr("class", "dragging");
 }
 function dragging() {
     var v1 = versor.cartesian(projection.rotate(r0).invert(d3.mouse(this))),
@@ -84,7 +74,11 @@ function dragging() {
         r1 = versor.rotation(q1);
 
     projection.rotate(r1);
+    draw();
+}
 
+
+function draw() {
     svg.selectAll("path").attr("d", path);
     svg.selectAll("text")
         .attr("x", function (d) {
@@ -93,7 +87,22 @@ function dragging() {
         .attr("y", function (d) {
             return path.centroid(d)[1] || 0;
         });
+    // arrangeLabels();
 }
+// var inertia = d3.geoInertiaDrag(svg, draw, projection);
+// d3.timer(function(e) {
+//   if (inertia.timer) return;
+//   var rotate = projection.rotate();
+//   projection.rotate([rotate[0] + 0.12, rotate[1], rotate[2]]);
+//   draw();
+// });
+
+var zoom = d3.zoom()
+    // no longer in d3 v4 - zoom initialises with zoomIdentity, so it's already at origin
+    // .translate([0, 0])
+    // .scale(1)
+    .scaleExtent([1, 9])
+    .on("zoom", onzoom);
 
 svg.call(zoom);
 function onzoom() {
@@ -111,4 +120,29 @@ function onzoom() {
     // d3.select("svg").selectAll("path").attr("d",path);
     // map.style("stroke-width", 1.5 / d3.event.transform.k + "px");
     group.attr("transform", "translate(" + d3.event.transform.x + "," + d3.event.transform.y + ")scale(" + d3.event.transform.k + ")"); // updated for d3 v4
+    // Keep font size constant visually
+    svg.selectAll("text.place-label")
+        .style("font-size", Math.max(4, (8 / d3.event.transform.k)) + "px");
+    // console.log("zoom", d3.event.transform.k);
+    // arrangeLabels();
+}
+
+
+function arrangeLabels() {
+    var shown = [];
+    svg.selectAll("text.place-label")
+        .style("display", function() {
+            var thisBox = this.getBBox();
+            for (var i = 0; i < shown.length; i++) {
+                var otherBox = shown[i];
+                if (!(thisBox.x + thisBox.width < otherBox.x ||
+                      thisBox.x > otherBox.x + otherBox.width ||
+                      thisBox.y + thisBox.height < otherBox.y ||
+                      thisBox.y > otherBox.y + otherBox.height)) {
+                    return "none"; // Hide if overlaps
+                }
+            }
+            shown.push(thisBox);
+            return "block"; // Show if no overlap
+        });
 }

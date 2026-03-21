@@ -1,10 +1,11 @@
-var width = 500, height = 500;
+var width = window.innerWidth, height = window.innerHeight;
 // var context = d3.select("canvas").node().getContext("2d");
 // path = d3.geoPath(d3.geoOrthographic(), context);
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
-const INIT_SCALE = 100;
+const INIT_SCALE = 200;
+const INIT_FONTSIZE = 12;
 const PROJECTIONS = [
     { name: 'Orthographic', object: d3.geoOrthographic().clipAngle(90), scale: INIT_SCALE },
     { name: 'Natural Earth', object: d3.geoNaturalEarth1(),             scale: INIT_SCALE },
@@ -22,6 +23,9 @@ var path = d3.geoPath().projection(projection);
 // and breaks across antimeridian or under heavy projection distortion.
 function getLabelCentroid(d) {
     if (!d || !d.geometry) return [NaN, NaN];
+    if (projection == PROJECTIONS[0].object) {
+        return path.centroid(d);       // geographic [lon, lat] — projection-independent
+    }
     var feature = d;
     if (d.geometry.type === 'MultiPolygon') {
         var largest = null, largestArea = 0;
@@ -32,25 +36,13 @@ function getLabelCentroid(d) {
         });
         if (largest) feature = largest;
     }
-    if (projection == PROJECTIONS[0].object) {
-        return path.centroid(feature);       // geographic [lon, lat] — projection-independent
-    }
     var geo = d3.geoCentroid(feature);       // geographic [lon, lat] — projection-independent
     return projection(geo) || [NaN, NaN];    // null when clipped (back hemisphere)
-}
-
-function resetNorthUp() {
-    var r = projection.rotate();
-    projection.rotate([r[0], r[1], 0]); // keep current longitude, reset tilt and roll
-    draw();
-    arrangeLabels();
-    repositionPopup();
 }
 
 function switchProjection(index) {
     projectionIndex = +index;
     var config = PROJECTIONS[projectionIndex];
-    var rotate = projection.rotate();
     config.object
         .scale(projection.scale())
         .translate(projection.translate())
@@ -207,20 +199,48 @@ d3.json("test/map.topojson", function (world) {
         d3.select(this)
         .attr("class", "place-label")
         .attr("text-anchor", "middle")
-        .attr("font-size", "8px")
+        .attr("font-size", INIT_FONTSIZE + "px")
         .style("display", isNaN(center[0]) ? "none": null)
         .attr("x", center[0] || 0)
         .attr("y", center[1] || 0)
-        .text(function (d) {
-            return d.id;
-        })
         .on("click", function(d) {
             if (d3.event.defaultPrevented) return;
             d3.event.stopPropagation();
             showPopup(d.id, d3.event.pageX, d3.event.pageY);
         })
+
+        const longText = d.id.length > 15 && d.id.indexOf(" ") > 0;
+        if (!longText) {
+            d3.select(this).text(d.id);
+        } else {
+            let half_pos = d.id.length / 2;
+            let last_space_pos = -1;
+            for (let i = 0; i < d.id.length; ++i) {
+                if (d.id[i] == " ") {
+                    if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
+                        last_space_pos = i;
+                    }
+                }
+            }
+            d3.select(this).append("tspan")
+                .attr("x", center[0] || 0)
+                .attr("dy", "0")
+                .text(d.id.slice(0, last_space_pos));
+            d3.select(this).append("tspan")
+                .attr("x", center[0] || 0)
+                .attr("dy", "1em")
+                .text(d.id.slice(last_space_pos + 1));
+        }
         // .call(wrap, 60)
     })
+
+	params = parseQuery();
+    group.append("text")
+        .attr("x", "40")
+        .attr("y", height - 40)
+        .attr("font-size", "32")
+        .text(params.t || "")
+
     arrangeLabels();
 });
 
@@ -252,7 +272,14 @@ function dragging() {
         q1 = versor.multiply(q0, versor.delta(v0, v1)),
         r1 = versor.rotation(q1);
 
-    projection.rotate(r1);
+    const snapDegree = parseInt(document.querySelector("#snap-select").value);
+    if (snapDegree) {
+        const a = Math.round(r1[0] / snapDegree) * snapDegree;
+        const b = Math.round(r1[1] / snapDegree) * snapDegree;
+        projection.rotate([a, b, r0[2]]);
+    } else {
+        projection.rotate([r1[0], r1[1], r0[2]]);
+    }
     draw();
     var e = d3.event.sourceEvent;
     onPopupDragging(e.clientX, e.clientY);
@@ -261,16 +288,16 @@ function dragging() {
 
 function draw() {
     svg.selectAll("path").attr("d", path);
-    svg.selectAll("text.place-label")
-        .attr("x", function (d) {
-            var c = getLabelCentroid(d);
-            return isNaN(c[0]) ? 0 : c[0];
-        })
-        .attr("y", function (d) {
-            var c = getLabelCentroid(d);
-            return isNaN(c[1]) ? 0 : c[1];
-        });
-    // arrangeLabels();
+    svg.selectAll("text.place-label").each(function(d) {
+        var c = getLabelCentroid(d);
+        d3.select(this)
+        .attr("x", isNaN(c[0]) ? 0 : c[0])
+        .attr("y", isNaN(c[1]) ? 0 : c[1])
+        .selectAll("tspan")
+        .attr("x", isNaN(c[0]) ? 0 : c[0])
+    })
+
+    arrangeLabels();
 }
 // var inertia = d3.geoInertiaDrag(svg, draw, projection);
 // d3.timer(function(e) {
@@ -284,7 +311,7 @@ var zoom = d3.zoom()
     // no longer in d3 v4 - zoom initialises with zoomIdentity, so it's already at origin
     // .translate([0, 0])
     // .scale(1)
-    .scaleExtent([1, 9])
+    .scaleExtent([1, 50])
     .on("zoom", onzoom);
 
 svg.call(zoom);
@@ -292,7 +319,7 @@ var lastZoomK = 1;
 function onzoom() {
     var s = projection.scale() * d3.event.transform.k / lastZoomK;
     lastZoomK = d3.event.transform.k;
-    projection.scale(Math.max(INIT_SCALE, Math.min(s, 2500)));
+    projection.scale(s);
 
     // Do not apply d3.zoom's mouse-relative transform — redraw centered via projection
     group.attr("transform", null);
@@ -301,7 +328,7 @@ function onzoom() {
     // Scale font size inversely with projection scale so labels stay readable
     var relScale = projection.scale() / INIT_SCALE;
     svg.selectAll("text.place-label")
-        .style("font-size", Math.max(4, 8 / Math.pow(relScale, 0.1)) + "px");
+        .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.1)) + "px");
     arrangeLabels();
     repositionPopup();
 }
@@ -331,3 +358,45 @@ function arrangeLabels() {
             return null; // Show (remove inline style override)
         });
 }
+
+function parseQuery(){
+	params = {};
+	search = window.location.search.substring(1).split("&");
+	search.forEach(function(val){
+		query = val.split("=");
+		if(query.length==2)
+			params[query[0]] = decodeURI(query[1]);
+	});
+
+	return params;
+}
+
+function setAuthor(){
+	p = parseQuery();
+	answer = prompt("Please enter the name you want to show:", p.t);
+	if(answer!=null){
+		window.location.search = "t="+encodeURI(answer);
+	}
+}
+
+function toDataURL (width, height) {
+	var svgString = new XMLSerializer().serializeToString(document.querySelector('svg'));
+	var canvas = document.createElement('canvas');
+	var ctx = canvas.getContext("2d");
+	canvas.width = width;
+	// canvas.width = ($('#svg').width()>1000)? $('#svg').width() : 1000;
+	// canvas.width = (canvas.width>1500)? 1500 : canvas.width;
+	canvas.height = height;
+	canvg(canvas, svgString);
+	return canvas.toDataURL("image/png");
+}
+
+function saveAsImage(elem) {
+    const svg = document.querySelector("svg");
+    const bbox = svg.getBBox();
+	// var width = (bbox.width > 1000) ? bbox.width : 1000;
+	var png = toDataURL(bbox.width, bbox.height);
+	// png.replace(/^data:image\/png/, 'data:application/octet-stream');
+	elem.setAttribute('href', png);
+	// window.open(png, 'japanex.png');
+};

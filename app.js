@@ -128,6 +128,9 @@ function showPopup(id, clientX, clientY) {
     popup.style("display", "block")
         .style("left", clientX + "px")
         .style("top",  clientY + "px");
+    popup.select(".search")
+        .attr("href", 'https://google.com/search?q='+id)
+        .attr("title", 'Search: '+id)
 }
 function hidePopup() {
     popup.style("display", "none");

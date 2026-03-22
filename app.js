@@ -133,6 +133,7 @@ function setCountryLevel(id, level) {
     if (!id) return;
     countryLevels[id] = level;
     svg.selectAll(".node path").filter(function(d) { return d.id === id; })
+        .attr("levelcolor", levelColorNames[level])
         .attr("fill", levelColors[level]);
 }
 

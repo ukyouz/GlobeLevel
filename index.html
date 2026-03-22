@@ -98,10 +98,17 @@
         }
         svg text {
             font-family: sans-serif;
+            transition: color .3s;
+        }
+        svg text.place:hover {
+            stroke: #3e6ffe;
         }
         svg text.place,
         svg path[id] {
             cursor: pointer;
+        }
+        svg path[id] {
+            transition: fill .3s;
         }
 
         .form {
@@ -165,20 +172,38 @@
         .form .label:hover, .form .label.selected {
         background: #eaeaea;
         }
+        svg path[id]:hover {
+            fill: #eaeaea;
+        }
         .form .label.red:hover, .form .label.red.selected {
         background: #e84c3d;
+        }
+        svg path[id][levelcolor=red]:hover {
+            fill: #f1776c;
         }
         .form .label.orange:hover, .form .label.orange.selected {
         background: #d58337;
         }
+        svg path[id][levelcolor=orange]:hover {
+            fill: #e79d58;
+        }
         .form .label.green:hover, .form .label.green.selected {
         background: #30cc70;
+        }
+        svg path[id][levelcolor=green]:hover {
+            fill: #47e287;
         }
         .form .label.yellow:hover, .form .label.yellow.selected {
         background: #f3c218;
         }
+        svg path[id][levelcolor=yellow]:hover {
+            fill: #f9d247;
+        }
         .form .label.blue:hover, .form .label.blue.selected {
         background: #3598db;
+        }
+        svg path[id][levelcolor=blue]:hover {
+            fill: #50b5f8;
         }
         .share {
             position: absolute;

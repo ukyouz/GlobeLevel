@@ -118,8 +118,11 @@
         z-index: 99;
         }
         .form .title {
-        background: #efefef;
-        padding: 4px 1em;
+            display: flex;
+            background: #efefef;
+            padding: 4px 0.5em 4px 1em;
+            align-items: center;
+            justify-content: space-between;
         }
         [lang="en"] .form .title {
         padding-right: 70px;
@@ -129,20 +132,17 @@
         margin-left: 2px;
         }
         .form .title .icon-group {
-        position: absolute;
-        right: 0;
-        top: 0;
-        padding: 0 12px;
+            margin-left: 12px;
+            white-space: nowrap;
         }
         .form .title .icon-group .icon {
-        line-height: 30px;
-        padding: 0px 6px;
-        color: #bbb;
-        cursor: pointer;
-        display: block;
-        float: left;
-        text-decoration: none;
-        transition: color 0.3s;
+            line-height: 1;
+            padding: 3px;
+            color: #bbb;
+            cursor: pointer;
+            display: inline-block;
+            text-decoration: none;
+            transition: color 0.3s;
         }
         .form .title .icon-group .icon.search:hover {
         color: #3e6ffe;
@@ -212,7 +212,7 @@
 </nav>
 <div class="form" id="form">
     <div class="title">
-        @<span class="lang place-name">地點</span>
+        <span>@<span class="lang place-name">地點</span></span>
         <div class="icon-group">
             <a class="fa fa-search icon search" href="#" title target="_blank"></a>
             <span class="fa fa-times icon close" id="close"></span>

@@ -5,7 +5,7 @@ var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + ""
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
 const INIT_SCALE = 200;
-const INIT_FONTSIZE = 12;
+const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
     { name: 'Orthographic', object: d3.geoOrthographic().clipAngle(90), scale: INIT_SCALE },
     { name: 'Natural Earth', object: d3.geoNaturalEarth1(),             scale: INIT_SCALE },
@@ -194,43 +194,14 @@ d3.json("test/map.topojson", function (world) {
         return d3.geoArea(b) - d3.geoArea(a);
     });
     nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
-    .append("text").each(function(d) {
+    .append("g").each(function(d) {
         const center = getLabelCentroid(d);
-        d3.select(this)
-        .attr("class", "place-label")
-        .attr("text-anchor", "middle")
-        .attr("font-size", INIT_FONTSIZE + "px")
-        .style("display", isNaN(center[0]) ? "none": null)
-        .attr("x", center[0] || 0)
-        .attr("y", center[1] || 0)
-        .on("click", function(d) {
-            if (d3.event.defaultPrevented) return;
-            d3.event.stopPropagation();
-            showPopup(d.id, d3.event.pageX, d3.event.pageY);
-        })
-
-        const longText = d.id.length > 15 && d.id.indexOf(" ") > 0;
-        if (!longText) {
-            d3.select(this).text(d.id);
-        } else {
-            let half_pos = d.id.length / 2;
-            let last_space_pos = -1;
-            for (let i = 0; i < d.id.length; ++i) {
-                if (d.id[i] == " ") {
-                    if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
-                        last_space_pos = i;
-                    }
-                }
-            }
-            d3.select(this).append("tspan")
-                .attr("x", center[0] || 0)
-                .attr("dy", "0")
-                .text(d.id.slice(0, last_space_pos));
-            d3.select(this).append("tspan")
-                .attr("x", center[0] || 0)
-                .attr("dy", "1em")
-                .text(d.id.slice(last_space_pos + 1));
-        }
+        var bg = addLabel(d3.select(this).append("text"), center, d.id);
+        var fg = addLabel(d3.select(this).append("text"), center, d.id);
+        bg.attr("class", "place place-outline")
+            .attr("stroke", "white")
+            .attr("stroke-width", "2")
+        fg.attr("class", "place place-label")
         // .call(wrap, 60)
     })
 
@@ -240,10 +211,54 @@ d3.json("test/map.topojson", function (world) {
         .attr("y", height - 40)
         .attr("font-size", "32")
         .text(params.t || "")
+        .attr("stroke", "white")
+        .attr("stroke-width", "4")
+    group.append("text")
+        .attr("x", "40")
+        .attr("y", height - 40)
+        .attr("font-size", "32")
+        .text(params.t || "")
 
     arrangeLabels();
 });
 
+function addLabel(d3Node, center, text) {
+    d3Node
+    .attr("text-anchor", "middle")
+    .attr("font-size", INIT_FONTSIZE + "px")
+    .style("display", isNaN(center[0]) ? "none": null)
+    .attr("x", center[0] || 0)
+    .attr("y", center[1] || 0)
+    .on("click", function(d) {
+        if (d3.event.defaultPrevented) return;
+        d3.event.stopPropagation();
+        showPopup(text, d3.event.pageX, d3.event.pageY);
+    })
+
+    const longText = text.length > 15 && text.indexOf(" ") > 0;
+    if (!longText) {
+        d3Node.text(text);
+    } else {
+        let half_pos = text.length / 2;
+        let last_space_pos = -1;
+        for (let i = 0; i < text.length; ++i) {
+            if (text[i] == " ") {
+                if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
+                    last_space_pos = i;
+                }
+            }
+        }
+        d3Node.append("tspan")
+            .attr("x", center[0] || 0)
+            .attr("dy", "0")
+            .text(text.slice(0, last_space_pos));
+        d3Node.append("tspan")
+            .attr("x", center[0] || 0)
+            .attr("dy", "1em")
+            .text(text.slice(last_space_pos + 1));
+    }
+    return d3Node;
+}
 
 
 svg.call(d3.drag()
@@ -288,7 +303,7 @@ function dragging() {
 
 function draw() {
     svg.selectAll("path").attr("d", path);
-    svg.selectAll("text.place-label").each(function(d) {
+    svg.selectAll("text.place").each(function(d) {
         var c = getLabelCentroid(d);
         d3.select(this)
         .attr("x", isNaN(c[0]) ? 0 : c[0])
@@ -327,8 +342,8 @@ function onzoom() {
 
     // Scale font size inversely with projection scale so labels stay readable
     var relScale = projection.scale() / INIT_SCALE;
-    svg.selectAll("text.place-label")
-        .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.1)) + "px");
+    svg.selectAll("text.place")
+        .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
     arrangeLabels();
     repositionPopup();
 }
@@ -336,27 +351,34 @@ function onzoom() {
 
 function arrangeLabels() {
     // Reset all to visible first — getBBox() throws on display:none elements in Chrome
-    svg.selectAll("text.place-label").style("display", null);
+    svg.selectAll("text.place").style("display", null);
 
     var shown = [];
-    svg.selectAll("text.place-label")
-        .style("display", function(d) {
-
-            var geo = getLabelCentroid(d);
-            if (isNaN(geo[0])) return "none";
+    svg.selectAll("text.place-outline")
+        .each(function(d) {
+            const geo = getLabelCentroid(d);
+            var isShown = true;
+            if (isNaN(geo[0])) isShown = false;
 
             var b = this.getBBox();
             for (var i = 0; i < shown.length; i++) {
                 var s = shown[i];
                 if (b.x < s.x + s.width && b.x + b.width > s.x &&
                     b.y < s.y + s.height && b.y + b.height > s.y) {
-                    return "none"; // Hide if overlaps a higher-priority label
+                    isShown = false; // Hide if overlaps a higher-priority label
                 }
             }
-            // Store a plain object copy (not a live DOMRect)
-            shown.push({ x: b.x, y: b.y, width: b.width, height: b.height });
-            return null; // Show (remove inline style override)
-        });
+            d3.select(this)
+            .attr("shown", isShown)
+            .style("display", function(d) {
+                if (!isShown) return "none"
+                // Store a plain object copy (not a live DOMRect)
+                shown.push({ x: b.x, y: b.y, width: b.width, height: b.height });
+                return null; // Show (remove inline style override)
+            });
+        })
+    svg.selectAll("text.place-outline[shown=false] ~ text.place-label")
+        .style("display", "none")
 }
 
 function parseQuery(){

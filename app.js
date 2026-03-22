@@ -358,6 +358,7 @@ function arrangeLabels() {
         .each(function(d) {
             const geo = getLabelCentroid(d);
             var isShown = true;
+            if (d3.select(this).attr("disabled") == "true") isShown = false;
             if (isNaN(geo[0])) isShown = false;
 
             var b = this.getBBox();
@@ -379,6 +380,15 @@ function arrangeLabels() {
         })
     svg.selectAll("text.place-outline[shown=false] ~ text.place-label")
         .style("display", "none")
+}
+
+function toggleLabel(show) {
+    if (!show) {
+        svg.selectAll("text.place").attr("disabled", "true");
+    } else {
+        svg.selectAll("text.place").attr("disabled", null);
+    }
+    arrangeLabels()
 }
 
 function parseQuery(){

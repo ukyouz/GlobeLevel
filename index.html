@@ -99,6 +99,10 @@
         svg text {
             font-family: sans-serif;
         }
+        svg text.place,
+        svg path[id] {
+            cursor: pointer;
+        }
 
         .form {
         background: #fff;
@@ -178,11 +182,15 @@
         }
         .share {
             position: absolute;
-            bottom: 0.75em;
+            bottom: 1em;
             right: 1em;
             text-align: right;
             user-select: none;
         }
+        .config {
+            bottom: calc(1em + 29px + 0.5em);
+        }
+        .config .btn,
         .share .btn {
             background: #fff;
             border: 1px solid #aaa;
@@ -197,6 +205,7 @@
             text-decoration: none;
             vertical-align: bottom;
         }
+        .config select,
         .share select {
             height: 29px;
         }
@@ -222,23 +231,23 @@
     <!-- <label v-for="level in d.form" class="label lang level" :id="current_city+'-'+level.level" :class="level.color" :data-value="level.level" v-text="level.description"/></label> -->
 </div>
 <div class="share">
-    <select id="proj-select" class="btn" onchange="switchProjection(this.value)">
-        <option value="0">Orthographic</option>
-        <option value="1">Natural Earth</option>
-        <option value="2">Equirectangular</option>
-        <option value="3">Mercator</option>
-        <option value="4">Stereographic</option>
-    </select>
-    <select id="snap-select" class="btn">
-        <option value="0">Free Rotate</option>
-        <option value="15">15 deg</option>
-        <option value="30">30 deg</option>
-    </select>
-    <!-- <select class="btn" v-model="lang">
-        <option v-for="lang in langs" :value="lang.code" v-text="lang.name"></option>
-    </select> -->
     <div class="btn" onclick="setAuthor();">Set Name</div>
     <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="japanex.png">Download</a>
+    <div class="config">
+        <select id="proj-select" class="btn" onchange="switchProjection(this.value)">
+            <option value="0">Orthographic</option>
+            <option value="1">Natural Earth</option>
+            <option value="2">Equirectangular</option>
+            <option value="3">Mercator</option>
+            <option value="4">Stereographic</option>
+        </select>
+        <select id="snap-select" class="btn">
+            <option value="0">Free Rotate</option>
+            <option value="15">15 deg</option>
+            <option value="30">30 deg</option>
+        </select>
+        <label for="showLabel" class="btn"><input type="checkbox" id="showLabel" checked onchange="toggleLabel(this.checked)"/>Show Label</label>
+    </div>
 </div>
 <!-- <canvas></canvas> -->
 <!-- <canvas width="960" height="500"></canvas> -->

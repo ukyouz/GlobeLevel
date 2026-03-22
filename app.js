@@ -4,7 +4,7 @@ var width = window.innerWidth, height = window.innerHeight;
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
-const INIT_SCALE = 200;
+const INIT_SCALE = 160;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
     { name: 'Orthographic', object: d3.geoOrthographic().clipAngle(90), scale: INIT_SCALE },
@@ -332,6 +332,7 @@ var zoom = d3.zoom()
 
 svg.call(zoom);
 var lastZoomK = 1;
+svg.call(zoom.transform, d3.zoomIdentity.scale(2.5))
 function onzoom() {
     var s = projection.scale() * d3.event.transform.k / lastZoomK;
     lastZoomK = d3.event.transform.k;

@@ -3,14 +3,31 @@ var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + ""
 var group = svg.append("svg:g");
 const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
 const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
-const levelTexts = [
-    "Never been there",
-    "Passed there",
-    "Alighted there",
-    "Visited there",
-    "Stayed there",
-    "Lived there",
-]
+let LANGS = {
+    "en": {
+        "about-world-level": "About World Level",
+        "level0": "Never been there",
+        "level1": "Passed there",
+        "level2": "Alighted there",
+        "level3": "Visited there",
+        "level4": "Stayed there",
+        "level5": "Lived there",
+        "set-name": "Set Name",
+        "screenshot": "Screenshot",
+        "show-labels": "Show Labels",
+        "confirm-clear-levels": "Are you sure to clear all level colors?",
+        "ask-for-name": "Please enter the name you want to show:",
+        "projection.orthographic": "3D Globe",
+        "projection.natural-earth": "Natural Earth",
+        "projection.equirectangular": "Equirectangular",
+        "projection.mercator": "Mercator",
+        "projection.stereographic": "Stereographic",
+        "rotate-snap.free-rotate": "Free Rotate",
+        "rotate-snap.15-deg": "15 deg",
+        "rotate-snap.30-deg": "30 deg",
+    },
+}
+let UI = LANGS["en"];
 const INIT_SCALE = 160;
 const INIT_K = 2.5;
 const INIT_FONTSIZE = 13;
@@ -27,7 +44,8 @@ var path = d3.geoPath().projection(projection);
 
 d3.json("test/map.topojson", function (world) {
     console.log(world)
-    const {projId, k, rot, lvl} = readHash();
+    const {projId, k, rot, lvl, locale} = readHash();
+    translateUI(locale);
 
     // Ocean (sphere background)
     group.append("path")
@@ -333,7 +351,7 @@ var levelBtns = popup.selectAll(".level-btn")
     .data(levelColorNames).enter()
     .append("label")
     .attr("class", (d) => `label lang level ${d}`)
-    .text(function(d, i) { return levelTexts[i]; })
+    .text(function(d, i) { return UI[`level${i}`]; })
     .on("click", function(d, i) {
         d3.event.stopPropagation();
         setCountryLevel(activeAreaId, i);
@@ -371,6 +389,7 @@ function updateHash() {
     const projId = document.querySelector("#proj-select").value;
     const rot = projection.rotate()
     const levelBigNumber = encodeLevels()
+    const lang = document.querySelector("#lang").value;
 
     let hashs = {};
     if (projId != 0) {
@@ -385,6 +404,9 @@ function updateHash() {
     if (levelBigNumber) {
         hashs.l = levelBigNumber;
     }
+    if (lang != "en") {
+        hashs.la = lang;
+    }
     window.location = encodeQuery("#", hashs);
 }
 
@@ -396,6 +418,7 @@ function readHash() {
         "k": parseFloat(hash.k != undefined ? hash.k : `${INIT_K}`),
         "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
         "lvl": decodeLevels(hash.l || ""),
+        "locale": hash.la || "en",
     }
 }
 
@@ -479,7 +502,7 @@ function parseQuery(search){
 }
 
 function clearLevels() {
-    let result = confirm("Are you sure to clear all level colors?");
+    let result = confirm(UI["confirm-clear-levels"]);
     if (!result) return;
 
     const hashs = readHash();
@@ -493,7 +516,7 @@ function clearLevels() {
 
 function setAuthor(){
 	p = parseQuery(window.location.search);
-	answer = prompt("Please enter the name you want to show:", p.t);
+	answer = prompt(UI["ask-for-name"], p.t);
 	if(answer!=null){
 		window.location.search = "t="+encodeURI(answer);
 	}
@@ -515,3 +538,30 @@ function saveAsImage(elem) {
 	elem.setAttribute('href', png);
 	// window.open(png, 'japanex.png');
 };
+
+async function loadData(path, callback) {
+    try {
+        const response = await fetch(path);
+        if (!response.ok) throw new Error(`Network response was not ok (${path})`);
+        const data = await response.json();
+        callback(data);
+    } catch (error) {
+        console.error('Error loading JSON:', error);
+    }
+}
+
+function translateUI(lang="en") {
+    if (LANGS[lang] == undefined) {
+        loadData(`lang/${lang}.json`, function(data) {
+            LANGS[lang] = data;
+            translateUI(lang);
+        });
+    } else {
+        document.querySelectorAll("[i18n]").forEach(function(elem) {
+            const key = elem.attributes.i18n.value;
+            UI = LANGS[lang];
+            elem.innerHTML = UI[key];
+        })
+    }
+    updateHash();
+}

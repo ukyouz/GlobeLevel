@@ -12,7 +12,7 @@
 </svg>
 <nav class="nav-group">
 	<a href="/" class="link" title="Author's Blog"><i class="fa fa-house"></i></a>
-	<a href="/project/japanex" class="link" title="Project Note">About World Level</a>
+	<a href="/project/japanex" class="link" title="Project Note" i18n="about-world-level"></a>
 </nav>
 <div class="form" id="form">
     <div class="title">
@@ -25,23 +25,27 @@
     <div class="spots"></div>
 </div>
 <div class="share">
-    <div class="btn" onclick="setAuthor();">Set Name</div>
-    <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="japanex.png"><i class="fa-solid fa-camera"></i> Screenshot</a>
+    <select name="lang" id="lang" onchange="translateUI(this.value)">
+        <option value="en" selected>English</option>
+        <option value="zh_TW">繁體中文</option>
+    </select>
+    <div class="btn" onclick="setAuthor();" i18n="set-name"></div>
+    <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="japanex.png"><i class="fa-solid fa-camera"></i> <span i18n="screenshot"></span></a>
     <a class="btn" id="clearLevels" onclick="clearLevels()" title="Clear Levels"><i class="fa-solid fa-eraser"></i></a>
     <div class="config">
-        <select id="proj-select" class="btn" onchange="switchProjection(this.value)">
-            <option value="0">Orthographic</option>
-            <option value="1">Natural Earth</option>
-            <option value="2">Equirectangular</option>
-            <option value="3">Mercator</option>
-            <option value="4">Stereographic</option>
+        <select id="proj-select" class="btn" onchange="switchProjection(this.value)" title="select a projection">
+            <option value="0" i18n="projection.orthographic"></option>
+            <option value="1" i18n="projection.natural-earth"></option>
+            <option value="2" i18n="projection.equirectangular"></option>
+            <option value="3" i18n="projection.mercator"></option>
+            <option value="4" i18n="projection.stereographic"></option>
         </select>
         <select id="snap-select" class="btn">
-            <option value="0">Free Rotate</option>
-            <option value="15">15 deg</option>
-            <option value="30">30 deg</option>
+            <option value="0" i18n="rotate-snap.free-rotate"></option>
+            <option value="15" i18n="rotate-snap.15-deg"></option>
+            <option value="30" i18n="rotate-snap.30-deg"></option>
         </select>
-        <label for="showLabel" class="btn"><input type="checkbox" id="showLabel" checked onchange="toggleLabel(this.checked)"/>Show Label</label>
+        <label for="showLabel" class="btn"><input type="checkbox" id="showLabel" checked onchange="toggleLabel(this.checked)"/><span i18n="show-labels"></span></label>
     </div>
 </div>
 <script src="https://d3js.org/d3.v4.min.js"></script>

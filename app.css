@@ -35,6 +35,7 @@ body {
     color: black;
     overflow: visible;
     transition: color .2s;
+    line-height: 1.2;
 }
 
 .nav-group .link:hover {
@@ -47,8 +48,8 @@ body {
     background: black;
     width: 1px;
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: -5px;
+    bottom: -5px;
     right: 0;
     z-index: 9;
     -webkit-transform: rotate(15deg);

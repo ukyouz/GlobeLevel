@@ -1,9 +1,16 @@
 var width = window.innerWidth, height = window.innerHeight;
-// var context = d3.select("canvas").node().getContext("2d");
-// path = d3.geoPath(d3.geoOrthographic(), context);
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
-// .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
+const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
+const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
+const levelTexts = [
+    "Never been there",
+    "Passed there",
+    "Alighted there",
+    "Visited there",
+    "Stayed there",
+    "Lived there",
+]
 const INIT_SCALE = 160;
 const INIT_K = 2.5;
 const INIT_FONTSIZE = 13;
@@ -18,148 +25,6 @@ var projectionIndex = 0;
 var projection = PROJECTIONS[0].object.scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
 
-// For MultiPolygon features, centroid may fall outside all polygons (e.g. USA, Russia).
-// Find the largest sub-polygon, compute its geographic centroid, then project that
-// single point — more robust than path.centroid() which averages projected SVG coords
-// and breaks across antimeridian or under heavy projection distortion.
-function getLabelCentroid(d) {
-    if (!d || !d.geometry) return [NaN, NaN];
-    if (projection == PROJECTIONS[0].object) {
-        return path.centroid(d);       // geographic [lon, lat] — projection-independent
-    }
-    var feature = d;
-    if (d.geometry.type === 'MultiPolygon') {
-        var largest = null, largestArea = 0;
-        d.geometry.coordinates.forEach(function(coords) {
-            var poly = { type: 'Feature', geometry: { type: 'Polygon', coordinates: coords } };
-            var a = d3.geoArea(poly);
-            if (a > largestArea) { largestArea = a; largest = poly; }
-        });
-        if (largest) feature = largest;
-    }
-    var geo = d3.geoCentroid(feature);       // geographic [lon, lat] — projection-independent
-    return projection(geo) || [NaN, NaN];    // null when clipped (back hemisphere)
-}
-
-function switchProjection(index) {
-    projectionIndex = +index;
-    var config = PROJECTIONS[projectionIndex];
-    config.object
-        .scale(projection.scale())
-        .translate(projection.translate())
-        .rotate(projection.rotate());
-    path.projection(config.object);
-    projection = config.object
-    // lastZoomK = 1;
-    draw();
-    arrangeLabels();
-    repositionPopup();
-    updateHash();
-}
-var colors = d3.scaleOrdinal(d3['schemeCategory20']);
-
-const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
-const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
-const levelTexts = [
-    "Never been there",
-    "Passed there",
-    "Alighted there",
-    "Visited there",
-    "Stayed there",
-    "Lived there",
-]
-var countryLevels = {};
-
-// --- Popup ---
-var activeCountryId = null;
-var activeGeoCentroid = null; // geographic centroid of the active country, stable across zoom
-var featureById = {};         // populated after topojson loads
-
-function svgToClient(svgX, svgY) {
-    var pt = svg.node().createSVGPoint();
-    pt.x = svgX;
-    pt.y = svgY;
-    var screen = pt.matrixTransform(svg.node().getScreenCTM());
-    return { x: screen.x, y: screen.y };
-}
-
-function clientToGeo(clientX, clientY) {
-    var pt = svg.node().createSVGPoint();
-    pt.x = clientX;
-    pt.y = clientY;
-    var svgPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
-    return projection.invert([svgPt.x, svgPt.y]);
-}
-
-function repositionPopup() {
-    if (!activeGeoCentroid || popup.style("display") === "none") return;
-    var projected = projection(activeGeoCentroid);
-    if (!projected) return; // country rotated to back hemisphere
-    var client = svgToClient(projected[0], projected[1]);
-    popup.style("left", client.x + "px")
-         .style("top",  client.y + "px");
-}
-
-var popup = d3.select("#form");
-popup.append("div").attr("class", "popup-title");
-var levelBtns = popup.selectAll(".level-btn")
-    .data(levelColorNames).enter()
-    .append("label")
-    .attr("class", (d) => `label lang level ${d}`)
-    .text(function(d, i) { return levelTexts[i]; })
-    .on("click", function(d, i) {
-        d3.event.stopPropagation();
-        setCountryLevel(activeCountryId, i);
-        hidePopup();
-    });
-
-function showPopup(id, clientX, clientY) {
-    activeCountryId = id;
-    activeGeoCentroid = clientToGeo(clientX, clientY);
-    popup.select(".place-name").text(id);
-    popup.selectAll(".level-btn")
-        .classed("current", function(d, i) { return i === (countryLevels[id] || 0); });
-    popup.style("display", "block")
-        .style("left", clientX + "px")
-        .style("top",  clientY + "px");
-    popup.select(".search")
-        .attr("href", 'https://google.com/search?q='+id)
-        .attr("title", 'Search: '+id)
-}
-function hidePopup() {
-    popup.style("display", "none");
-    activeCountryId = null;
-    activeGeoCentroid = null;
-}
-function setCountryLevel(id, level) {
-    if (!id) return;
-    countryLevels[id] = level;
-    svg.selectAll(".node path").filter(function(d) { return d.id === id; })
-        .attr("levelcolor", levelColorNames[level])
-        .attr("level", level)
-        .attr("fill", levelColors[level]);
-    updateHash();
-}
-
-d3.select(document).on("click", hidePopup);
-
-// Make popup draggable by its title bar
-var popupNode = document.getElementById("form");
-var popupDragOffset = null;
-
-function onPopupDragStart(clientX, clientY) {
-    if (!activeCountryId) return;
-    console.log(clientX, clientY)
-    var rect = popupNode.getBoundingClientRect();
-    popupDragOffset = { x: clientX - rect.left, y: clientY - rect.top };
-};
-function onPopupDragging(clientX, clientY) {
-    if (!activeCountryId) return;
-    if (!popupDragOffset) return;
-    popupNode.style.left = (clientX - popupDragOffset.x) + "px";
-    popupNode.style.top  = (clientY - popupDragOffset.y) + "px";
-}
-
 d3.json("test/map.topojson", function (world) {
     console.log(world)
     const {projId, k, rot, lvl} = readHash();
@@ -173,10 +38,8 @@ d3.json("test/map.topojson", function (world) {
         .on("dblclick", function(){d3.event.stopPropagation()})
 
     var countries = topojson.feature(world, world.objects.collection);
-    countries.features.forEach(function(f) { featureById[f.id] = f; });
-    // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
-    // var pathRenderer = d3.geoPath().projection(projection);
-    // countries
+
+    // Areas
     var nodes = group.append("g").selectAll("g").data(countries.features).enter()
         .each(function(d, index) {
             d3.select(this)
@@ -214,7 +77,6 @@ d3.json("test/map.topojson", function (world) {
             .attr("stroke", "white")
             .attr("stroke-width", "2")
         fg.attr("class", "place place-label")
-        // .call(wrap, 60)
     })
 
 	params = parseQuery(window.location.search);
@@ -278,15 +140,12 @@ function addLabel(d3Node, center, text) {
     return d3Node;
 }
 
-
 svg.call(d3.drag()
     .on("start", dragstart)
     .on("drag", dragging)
     .on("end", function () {
         svg.attr("class", null);
         arrangeLabels();
-        // inertia.start();
-        console.log(projection.rotate())
         updateHash();
     })
 );
@@ -297,8 +156,7 @@ function dragstart() {
     r0 = projection.rotate();
     q0 = versor(r0);
     svg.attr("class", "dragging");
-    var e = d3.event.sourceEvent;
-    onPopupDragStart(e.clientX, e.clientY);
+    arrangePopup();
 }
 function dragging() {
     const mousePos = d3.mouse(this);
@@ -315,8 +173,7 @@ function dragging() {
         projection.rotate([r1[0], r1[1], r0[2]]);
     }
     draw();
-    var e = d3.event.sourceEvent;
-    onPopupDragging(e.clientX, e.clientY);
+    arrangePopup();
 }
 
 
@@ -333,21 +190,11 @@ function draw() {
 
     arrangeLabels();
 }
-// var inertia = d3.geoInertiaDrag(svg, draw, projection);
-// d3.timer(function(e) {
-//   if (inertia.timer) return;
-//   var rotate = projection.rotate();
-//   projection.rotate([rotate[0] + 0.12, rotate[1], rotate[2]]);
-//   draw();
-// });
+
 
 var zoom = d3.zoom()
-    // no longer in d3 v4 - zoom initialises with zoomIdentity, so it's already at origin
-    // .translate([0, 0])
-    // .scale(1)
     .scaleExtent([1, 50])
     .on("zoom", onzoom);
-
 svg.call(zoom);
 var lastZoomK = 1;
 svg.call(zoom.transform, d3.zoomIdentity.scale(INIT_K))
@@ -365,7 +212,7 @@ function onzoom() {
     svg.selectAll("text.place")
         .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
     arrangeLabels();
-    repositionPopup();
+    arrangePopup();
 }
 
 
@@ -410,6 +257,115 @@ function toggleLabel(show) {
     }
     arrangeLabels()
 }
+
+
+// For MultiPolygon features, centroid may fall outside all polygons (e.g. USA, Russia).
+// Find the largest sub-polygon, compute its geographic centroid, then project that
+// single point — more robust than path.centroid() which averages projected SVG coords
+// and breaks across antimeridian or under heavy projection distortion.
+function getLabelCentroid(d) {
+    if (!d || !d.geometry) return [NaN, NaN];
+    if (projection == PROJECTIONS[0].object) {
+        return path.centroid(d);       // geographic [lon, lat] — projection-independent
+    }
+    var feature = d;
+    if (d.geometry.type === 'MultiPolygon') {
+        var largest = null, largestArea = 0;
+        d.geometry.coordinates.forEach(function(coords) {
+            var poly = { type: 'Feature', geometry: { type: 'Polygon', coordinates: coords } };
+            var a = d3.geoArea(poly);
+            if (a > largestArea) { largestArea = a; largest = poly; }
+        });
+        if (largest) feature = largest;
+    }
+    var geo = d3.geoCentroid(feature);       // geographic [lon, lat] — projection-independent
+    return projection(geo) || [NaN, NaN];    // null when clipped (back hemisphere)
+}
+
+function switchProjection(index) {
+    projectionIndex = +index;
+    var config = PROJECTIONS[projectionIndex];
+    config.object
+        .scale(projection.scale())
+        .translate(projection.translate())
+        .rotate(projection.rotate());
+    path.projection(config.object);
+    projection = config.object
+    draw();
+    arrangeLabels();
+    arrangePopup();
+    updateHash();
+}
+
+
+// --- Popup ---
+var activeAreaId = null;
+var activeGeoCentroid = null; // geographic centroid of the active area, stable across zoom
+
+function svgToClient(svgX, svgY) {
+    var pt = svg.node().createSVGPoint();
+    pt.x = svgX;
+    pt.y = svgY;
+    var screen = pt.matrixTransform(svg.node().getScreenCTM());
+    return { x: screen.x, y: screen.y };
+}
+
+function clientToGeo(clientX, clientY) {
+    var pt = svg.node().createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    var svgPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
+    return projection.invert([svgPt.x, svgPt.y]);
+}
+
+function arrangePopup() {
+    if (!activeGeoCentroid || popup.style("display") === "none") return;
+    var projected = projection(activeGeoCentroid);
+    if (!projected) return; // country rotated to back hemisphere
+    var client = svgToClient(projected[0], projected[1]);
+    popup.style("left", client.x + "px")
+         .style("top",  client.y + "px");
+}
+
+var popup = d3.select("#form");
+popup.append("div").attr("class", "popup-title");
+var levelBtns = popup.selectAll(".level-btn")
+    .data(levelColorNames).enter()
+    .append("label")
+    .attr("class", (d) => `label lang level ${d}`)
+    .text(function(d, i) { return levelTexts[i]; })
+    .on("click", function(d, i) {
+        d3.event.stopPropagation();
+        setCountryLevel(activeAreaId, i);
+        hidePopup();
+    });
+
+function showPopup(id, clientX, clientY) {
+    activeAreaId = id;
+    activeGeoCentroid = clientToGeo(clientX, clientY);
+    popup.select(".place-name").text(id);
+    popup.style("display", "block")
+        .style("left", clientX + "px")
+        .style("top",  clientY + "px");
+    popup.select(".search")
+        .attr("href", 'https://google.com/search?q='+id)
+        .attr("title", 'Search: '+id)
+}
+function hidePopup() {
+    popup.style("display", "none");
+    activeAreaId = null;
+    activeGeoCentroid = null;
+}
+function setCountryLevel(id, level) {
+    if (!id) return;
+    svg.selectAll(".node path").filter(function(d) { return d.id === id; })
+        .attr("levelcolor", levelColorNames[level])
+        .attr("level", level)
+        .attr("fill", levelColors[level]);
+    updateHash();
+}
+d3.select(document).on("click", hidePopup);
+
 
 function updateHash() {
     const projId = document.querySelector("#proj-select").value;
@@ -546,10 +502,7 @@ function setAuthor(){
 function toDataURL (width, height) {
 	var svgString = new XMLSerializer().serializeToString(document.querySelector('svg'));
 	var canvas = document.createElement('canvas');
-	var ctx = canvas.getContext("2d");
 	canvas.width = width;
-	// canvas.width = ($('#svg').width()>1000)? $('#svg').width() : 1000;
-	// canvas.width = (canvas.width>1500)? 1500 : canvas.width;
 	canvas.height = height;
 	canvg(canvas, svgString);
 	return canvas.toDataURL("image/png");
@@ -558,9 +511,7 @@ function toDataURL (width, height) {
 function saveAsImage(elem) {
     const svg = document.querySelector("svg");
     const bbox = svg.getBBox();
-	// var width = (bbox.width > 1000) ? bbox.width : 1000;
 	var png = toDataURL(bbox.width, bbox.height);
-	// png.replace(/^data:image\/png/, 'data:application/octet-stream');
 	elem.setAttribute('href', png);
 	// window.open(png, 'japanex.png');
 };

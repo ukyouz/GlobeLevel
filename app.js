@@ -416,21 +416,20 @@ function updateHash() {
     const rot = projection.rotate()
     const levelBigNumber = encodeLevels()
 
-    let hashs = [];
+    let hashs = {};
     if (projId != 0) {
-        hashs.push(`p=${projId}`)
+        hashs.p = projId;
     }
     if (lastZoomK != INIT_K) {
-        hashs.push(`k=${lastZoomK.toFixed(1)}`)
+        hashs.k = lastZoomK.toFixed(1);
     }
     if (rot[0] != 0 || rot[1] != 0) {
-        hashs.push(`r=${rot[0].toFixed(3)},${rot[1].toFixed(3)}`)
+        hashs.r = `${rot[0].toFixed(3)},${rot[1].toFixed(3)}`;
     }
     if (levelBigNumber) {
-        hashs.push(`l=${levelBigNumber}`)
+        hashs.l = levelBigNumber;
     }
-    if (hashs)
-        window.location = `#${hashs.join("&")}`;
+    window.location = encodeQuery("#", hashs);
 }
 
 function readHash() {
@@ -499,6 +498,18 @@ function decodeLevels(bignum) {
     return levels;
 }
 
+function encodeQuery(prefix, map) {
+    var params = [];
+    Object.entries(map).forEach(([k, v]) => {
+        params.push(`${k}=${v}`)
+    })
+    if (params) {
+        return prefix + params.join("&");
+    } else {
+        return "";
+    }
+}
+
 function parseQuery(search){
 	params = {};
 	queries = search.substring(1).split("&");
@@ -509,6 +520,19 @@ function parseQuery(search){
 	});
 
 	return params;
+}
+
+function clearLevels() {
+    let result = confirm("Are you sure to clear all level colors?");
+    if (!result) return;
+
+    const hashs = readHash();
+    window.location.hash = encodeQuery("#", {
+        p: hashs.projId,
+        k: hashs.k,
+        r: hashs.rot,
+    });
+    window.location.reload();
 }
 
 function setAuthor(){

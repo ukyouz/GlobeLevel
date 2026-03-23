@@ -4,7 +4,7 @@
     <meta charset="utf-8">
 	<meta name="viewport" content="width=device-width"/>
 	<title>World Level 世界等級/世界レベル</title>
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" type="text/css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"/>
     <style>
         html, body {
             margin: 0;
@@ -145,6 +145,7 @@
         .form .title .icon-group {
             margin-left: 12px;
             white-space: nowrap;
+            display: inherit;
         }
         .form .title .icon-group .icon {
             line-height: 1;
@@ -241,8 +242,8 @@
 <svg>
 </svg>
 <nav class="nav-group">
-	<a href="/" class="link" title="ZHUNG"><i class="fa fa-th"></i><span>Home</span></a>
-	<a href="/project/japanex" class="link" title="Project Note">About World Level Map</a>
+	<a href="/" class="link" title="Author's Blog"><i class="fa fa-house"></i></a>
+	<a href="/project/japanex" class="link" title="Project Note">About World Level</a>
 </nav>
 <div class="form" id="form">
     <div class="title">
@@ -257,7 +258,8 @@
 </div>
 <div class="share">
     <div class="btn" onclick="setAuthor();">Set Name</div>
-    <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="japanex.png">Download</a>
+    <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="japanex.png"><i class="fa-solid fa-camera"></i> Screenshot</a>
+    <a class="btn" id="clearLevels" onclick="clearLevels()" title="Clear Levels"><i class="fa-solid fa-eraser"></i></a>
     <div class="config">
         <select id="proj-select" class="btn" onchange="switchProjection(this.value)">
             <option value="0">Orthographic</option>

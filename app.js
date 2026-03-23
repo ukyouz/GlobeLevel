@@ -169,7 +169,8 @@ d3.json("test/map.topojson", function (world) {
         .datum({type: "Sphere"})
         .attr("class", "sphere")
         .attr("d", path)
-        .attr("fill", "#9EC3FB");
+        .attr("fill", "#9EC3FB")
+        .on("dblclick", function(){d3.event.stopPropagation()})
 
     var countries = topojson.feature(world, world.objects.collection);
     countries.features.forEach(function(f) { featureById[f.id] = f; });
@@ -194,6 +195,7 @@ d3.json("test/map.topojson", function (world) {
                 d3.event.stopPropagation();
                 showPopup(d.id, d3.event.pageX, d3.event.pageY);
             })
+            .on("dblclick", function(){d3.event.stopPropagation()})
             if (lvl[index]) {
                 setCountryLevel(d.id, lvl[index]);
             }
@@ -249,6 +251,7 @@ function addLabel(d3Node, center, text) {
         d3.event.stopPropagation();
         showPopup(text, d3.event.pageX, d3.event.pageY);
     })
+    .on("dblclick", function(){d3.event.stopPropagation()})
 
     const longText = text.length > 15 && text.indexOf(" ") > 0;
     if (!longText) {

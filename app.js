@@ -5,6 +5,7 @@ var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + ""
 // .attr("width", width).attr("height", height);
 var group = svg.append("svg:g");
 const INIT_SCALE = 160;
+const INIT_K = 2.5;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
     { name: 'Orthographic', object: d3.geoOrthographic().clipAngle(90), scale: INIT_SCALE },
@@ -53,6 +54,7 @@ function switchProjection(index) {
     draw();
     arrangeLabels();
     repositionPopup();
+    updateHash();
 }
 var colors = d3.scaleOrdinal(d3['schemeCategory20']);
 
@@ -134,7 +136,9 @@ function setCountryLevel(id, level) {
     countryLevels[id] = level;
     svg.selectAll(".node path").filter(function(d) { return d.id === id; })
         .attr("levelcolor", levelColorNames[level])
+        .attr("level", level)
         .attr("fill", levelColors[level]);
+    updateHash();
 }
 
 d3.select(document).on("click", hidePopup);
@@ -158,6 +162,7 @@ function onPopupDragging(clientX, clientY) {
 
 d3.json("test/map.topojson", function (world) {
     console.log(world)
+    const {projId, k, rot, lvl} = readHash();
 
     // Ocean (sphere background)
     group.append("path")
@@ -170,24 +175,28 @@ d3.json("test/map.topojson", function (world) {
     countries.features.forEach(function(f) { featureById[f.id] = f; });
     // console.log(topojson.feature(world, world.objects.countries), topojson.mesh(world, world.objects.countries));
     // var pathRenderer = d3.geoPath().projection(projection);
-    var nodes = group.append("g").selectAll("g").data(countries.features).enter()
-        .append("g")
-        .attr("class", "node")
-
     // countries
-    nodes
-        .append("path")
-        .attr("d", path)
-        .attr("id", function (d) {
-            return d.id;
-        })
-        .attr("stroke", "black")
-        .attr("stroke-linejoin", "round")
-        .attr("fill", "#fff")
-        .on("click", function(d) {
-            if (d3.event.defaultPrevented) return;
-            d3.event.stopPropagation();
-            showPopup(d.id, d3.event.pageX, d3.event.pageY);
+    var nodes = group.append("g").selectAll("g").data(countries.features).enter()
+        .each(function(d, index) {
+            d3.select(this)
+            .append("g")
+            .attr("class", "node")
+            .append("path")
+            .attr("d", path)
+            .attr("id", function (d) {
+                return d.id;
+            })
+            .attr("stroke", "black")
+            .attr("stroke-linejoin", "round")
+            .attr("fill", "#fff")
+            .on("click", function(d) {
+                if (d3.event.defaultPrevented) return;
+                d3.event.stopPropagation();
+                showPopup(d.id, d3.event.pageX, d3.event.pageY);
+            })
+            if (lvl[index]) {
+                setCountryLevel(d.id, lvl[index]);
+            }
         })
 
     // country labels — sorted by area descending so larger countries have higher priority
@@ -206,7 +215,7 @@ d3.json("test/map.topojson", function (world) {
         // .call(wrap, 60)
     })
 
-	params = parseQuery();
+	params = parseQuery(window.location.search);
     group.append("text")
         .attr("x", "40")
         .attr("y", height - 40)
@@ -220,6 +229,11 @@ d3.json("test/map.topojson", function (world) {
         .attr("font-size", "32")
         .text(params.t || "")
 
+
+    projection.rotate([rot[0], rot[1], 0])
+    switchProjection(projId);
+    svg.call(zoom.transform, d3.zoomIdentity.scale(k))
+    document.querySelector("#proj-select").value = projId;
     arrangeLabels();
 });
 
@@ -270,6 +284,7 @@ svg.call(d3.drag()
         arrangeLabels();
         // inertia.start();
         console.log(projection.rotate())
+        updateHash();
     })
 );
 var v0, r0, q0;
@@ -332,7 +347,7 @@ var zoom = d3.zoom()
 
 svg.call(zoom);
 var lastZoomK = 1;
-svg.call(zoom.transform, d3.zoomIdentity.scale(2.5))
+svg.call(zoom.transform, d3.zoomIdentity.scale(INIT_K))
 function onzoom() {
     var s = projection.scale() * d3.event.transform.k / lastZoomK;
     lastZoomK = d3.event.transform.k;
@@ -393,10 +408,98 @@ function toggleLabel(show) {
     arrangeLabels()
 }
 
-function parseQuery(){
+function updateHash() {
+    const projId = document.querySelector("#proj-select").value;
+    const rot = projection.rotate()
+    const levelBigNumber = encodeLevels()
+
+    let hashs = [];
+    if (projId != 0) {
+        hashs.push(`p=${projId}`)
+    }
+    if (lastZoomK != INIT_K) {
+        hashs.push(`k=${lastZoomK.toFixed(1)}`)
+    }
+    if (rot[0] != 0 || rot[1] != 0) {
+        hashs.push(`r=${rot[0].toFixed(3)},${rot[1].toFixed(3)}`)
+    }
+    if (levelBigNumber) {
+        hashs.push(`l=${levelBigNumber}`)
+    }
+    if (hashs)
+        window.location = `#${hashs.join("&")}`;
+}
+
+function readHash() {
+    const hash = parseQuery(window.location.hash);
+    const rot = (hash.r != undefined ? hash.r : "0.0,0.0").split(",")
+    return {
+        "projId": parseInt(hash.p != undefined ? hash.p: "0"),
+        "k": parseFloat(hash.k != undefined ? hash.k : `${INIT_K}`),
+        "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
+        "lvl": decodeLevels(hash.l || ""),
+    }
+}
+
+/*
+ * We don't want to simply combiles all levels for 201 areas. This will be a very long string,
+ * so we pack all those values into a short form string.
+ *
+ * Since level is 0 ~ 5, combination of two levels produces only 36 values,
+ * then we can simply encoding those 36 values to 0,1,...9,a,...z
+ *
+ * Finally, since almost all chars will be zeroes for most people that only had traveled to some places,
+ * we can use special chars to represent some fixed amount of zeroes.
+ * In this implant, '_' is '00000000000', ... etc.
+ * Prime number of counts I think are good choices for this purpose.
+ */
+const RADIXCHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
+const CHAR2LVLS = (function(){
+    const LEVELS = "012345"
+    var levels = {};
+    for (var i=0; i<6; i++) {
+        for (var j=0; j<6; j++) {
+            let pos = i*6 + j;
+            levels[RADIXCHARS[pos]] = [LEVELS[i], LEVELS[j]]
+        }
+    }
+    return levels
+})();
+
+function encodeLevels() {
+    const areas = document.querySelectorAll("path[id]")
+    const levels = [...areas].map(e => e.attributes.level ? parseInt(e.attributes.level.value) : 0);
+    let bignum = "";  // little endian in 32 based
+    for (var i=0; i<areas.length; i+=2) {
+        bignum += RADIXCHARS[levels[i] * 6 + (levels[i+1] || 0)]
+    }
+    return bignum.replace(/0+$/, "")
+        .replace(/00000000000/g, "_")
+        .replace(/0000000/g, "S")
+        .replace(/00000/g, "F")
+        .replace(/000/g, "T")
+        .replace(/00/g, "D");
+}
+
+function decodeLevels(bignum) {
+    let levels = [];
+    let rawbignum = bignum
+        .replace(/D/g, "00")
+        .replace(/T/g, "000")
+        .replace(/F/g, "00000")
+        .replace(/S/g, "0000000")
+        .replace(/_/g, "00000000000")
+    for (var i=0; i<rawbignum.length; i++) {
+        let lvls = CHAR2LVLS[rawbignum[i]];
+        levels.push(...lvls);
+    }
+    return levels;
+}
+
+function parseQuery(search){
 	params = {};
-	search = window.location.search.substring(1).split("&");
-	search.forEach(function(val){
+	queries = search.substring(1).split("&");
+	queries.forEach(function(val){
 		query = val.split("=");
 		if(query.length==2)
 			params[query[0]] = decodeURI(query[1]);
@@ -406,7 +509,7 @@ function parseQuery(){
 }
 
 function setAuthor(){
-	p = parseQuery();
+	p = parseQuery(window.location.search);
 	answer = prompt("Please enter the name you want to show:", p.t);
 	if(answer!=null){
 		window.location.search = "t="+encodeURI(answer);

@@ -107,7 +107,7 @@ svg text {
     transition: color .3s;
 }
 
-svg text.place:hover {
+svg text.place-label:hover {
     stroke: #3e6ffe;
 }
 
@@ -187,6 +187,10 @@ svg path[id] {
     display: block;
     -webkit-transition: background 0.2s;
     transition: background 0.2s;
+    border-bottom: 1px solid #efefef;
+}
+.form .label:last-child {
+    border-bottom: none;
 }
 
 .form .label:hover,

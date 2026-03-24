@@ -1,6 +1,18 @@
 var width = window.innerWidth, height = window.innerHeight;
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
 var group = svg.append("svg:g");
+const RADIXCHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
+const CHAR2LVLS = (function(){
+    const LEVELS = "012345"
+    var levels = {};
+    for (var i=0; i<6; i++) {
+        for (var j=0; j<6; j++) {
+            let pos = i*6 + j;
+            levels[RADIXCHARS[pos]] = [LEVELS[i], LEVELS[j]]
+        }
+    }
+    return levels
+})();
 const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
 const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
 let LANGS = {
@@ -27,7 +39,31 @@ let LANGS = {
         "rotate-snap.30-deg": "30 deg",
     },
 }
-let UI = LANGS["en"];
+class Lang {
+    constructor(locale) {
+        this.default = LANGS[locale];
+        this.active = this.default;
+    }
+    _(key) {
+        return this.active[key] || this.default[key];
+    }
+    area(id) {
+        return this._(`region.${id}`)
+    }
+    setArea(id, value) {
+        this.active[`region.${id}`] = value;
+    }
+    hasLocale(locale) {
+        return LANGS[locale] != undefined;
+    }
+    setLocale(locale, data=null) {
+        if (data)
+            LANGS[locale] = data;
+        this.active = LANGS[locale];
+    }
+}
+let UI = new Lang("en");
+
 const INIT_SCALE = 160;
 const INIT_K = 2.5;
 const INIT_FONTSIZE = 13;
@@ -45,7 +81,6 @@ var path = d3.geoPath().projection(projection);
 d3.json("test/map.topojson", function (world) {
     console.log(world)
     const {projId, k, rot, lvl, locale} = readHash();
-    translateUI(locale);
 
     // Ocean (sphere background)
     group.append("path")
@@ -88,6 +123,8 @@ d3.json("test/map.topojson", function (world) {
     });
     nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
     .append("g").each(function(d) {
+        UI.setArea(d.id, d.id);
+
         const center = getLabelCentroid(d);
         var bg = addLabel(d3.select(this).append("text"), center, d.id);
         var fg = addLabel(d3.select(this).append("text"), center, d.id);
@@ -116,6 +153,7 @@ d3.json("test/map.topojson", function (world) {
     switchProjection(projId);
     svg.call(zoom.transform, d3.zoomIdentity.scale(k))
     document.querySelector("#proj-select").value = projId;
+    translateUI(locale);
     arrangeLabels();
 });
 
@@ -126,6 +164,7 @@ function addLabel(d3Node, center, text) {
     .style("display", isNaN(center[0]) ? "none": null)
     .attr("x", center[0] || 0)
     .attr("y", center[1] || 0)
+    .attr("i18n", text)
     .on("click", function(d) {
         if (d3.event.defaultPrevented) return;
         d3.event.stopPropagation();
@@ -133,28 +172,6 @@ function addLabel(d3Node, center, text) {
     })
     .on("dblclick", function(){d3.event.stopPropagation()})
 
-    const longText = text.length > 15 && text.indexOf(" ") > 0;
-    if (!longText) {
-        d3Node.text(text);
-    } else {
-        let half_pos = text.length / 2;
-        let last_space_pos = -1;
-        for (let i = 0; i < text.length; ++i) {
-            if (text[i] == " ") {
-                if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
-                    last_space_pos = i;
-                }
-            }
-        }
-        d3Node.append("tspan")
-            .attr("x", center[0] || 0)
-            .attr("dy", "0")
-            .text(text.slice(0, last_space_pos));
-        d3Node.append("tspan")
-            .attr("x", center[0] || 0)
-            .attr("dy", "1em")
-            .text(text.slice(last_space_pos + 1));
-    }
     return d3Node;
 }
 
@@ -236,7 +253,9 @@ function onzoom() {
 
 function arrangeLabels() {
     // Reset all to visible first — getBBox() throws on display:none elements in Chrome
-    svg.selectAll("text.place").style("display", null);
+    svg.selectAll("text.place")
+        .attr("shown", "false")
+        .style("display", null);
 
     var shown = [];
     svg.selectAll("text.place-outline")
@@ -254,6 +273,7 @@ function arrangeLabels() {
                     isShown = false; // Hide if overlaps a higher-priority label
                 }
             }
+
             d3.select(this)
             .attr("shown", isShown)
             .style("display", function(d) {
@@ -351,7 +371,8 @@ var levelBtns = popup.selectAll(".level-btn")
     .data(levelColorNames).enter()
     .append("label")
     .attr("class", (d) => `label lang level ${d}`)
-    .text(function(d, i) { return UI[`level${i}`]; })
+    // .text(function(d, i) { return UI[`level${i}`]; })
+    .attr("i18n", (d,i) => `level${i}`)
     .on("click", function(d, i) {
         d3.event.stopPropagation();
         setCountryLevel(activeAreaId, i);
@@ -361,7 +382,7 @@ var levelBtns = popup.selectAll(".level-btn")
 function showPopup(id, clientX, clientY) {
     activeAreaId = id;
     activeGeoCentroid = clientToGeo(clientX, clientY);
-    popup.select(".place-name").text(id);
+    popup.select(".place-name").text(UI.area(id));
     popup.style("display", "block")
         .style("left", clientX + "px")
         .style("top",  clientY + "px");
@@ -434,19 +455,6 @@ function readHash() {
  * In this implant, '_' is '00000000000', ... etc.
  * Prime number of counts I think are good choices for this purpose.
  */
-const RADIXCHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
-const CHAR2LVLS = (function(){
-    const LEVELS = "012345"
-    var levels = {};
-    for (var i=0; i<6; i++) {
-        for (var j=0; j<6; j++) {
-            let pos = i*6 + j;
-            levels[RADIXCHARS[pos]] = [LEVELS[i], LEVELS[j]]
-        }
-    }
-    return levels
-})();
-
 function encodeLevels() {
     const areas = document.querySelectorAll("path[id]")
     const levels = [...areas].map(e => e.attributes.level ? parseInt(e.attributes.level.value) : 0);
@@ -502,7 +510,7 @@ function parseQuery(search){
 }
 
 function clearLevels() {
-    let result = confirm(UI["confirm-clear-levels"]);
+    let result = confirm(UI._("confirm-clear-levels"));
     if (!result) return;
 
     const hashs = readHash();
@@ -516,7 +524,7 @@ function clearLevels() {
 
 function setAuthor(){
 	p = parseQuery(window.location.search);
-	answer = prompt(UI["ask-for-name"], p.t);
+	answer = prompt(UI._("ask-for-name"), p.t);
 	if(answer!=null){
 		window.location.search = "t="+encodeURI(answer);
 	}
@@ -551,17 +559,47 @@ async function loadData(path, callback) {
 }
 
 function translateUI(lang="en") {
-    if (LANGS[lang] == undefined) {
+    if (!UI.hasLocale(lang)) {
         loadData(`lang/${lang}.json`, function(data) {
-            LANGS[lang] = data;
+            UI.setLocale(lang, data)
             translateUI(lang);
         });
     } else {
+        UI.setLocale(lang)
         document.querySelectorAll("[i18n]").forEach(function(elem) {
             const key = elem.attributes.i18n.value;
-            UI = LANGS[lang];
-            elem.innerHTML = UI[key];
+
+            if (elem.classList.contains("place")) {
+                const text = UI.area(key);
+                const longText = text.length > 15 && text.indexOf(" ") > 0;
+                const d3Node = d3.select(elem);
+                if (!longText) {
+                    d3Node.text(text);
+                } else {
+                    let half_pos = text.length / 2;
+                    let last_space_pos = -1;
+                    for (let i = 0; i < text.length; ++i) {
+                        if (text[i] == " ") {
+                            if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
+                                last_space_pos = i;
+                            }
+                        }
+                    }
+                    elem.innerHTML = "";
+                    d3Node.append("tspan")
+                        .attr("x", d3Node.attr("x"))
+                        .attr("dy", "0")
+                        .text(text.slice(0, last_space_pos));
+                    d3Node.append("tspan")
+                        .attr("x", d3Node.attr("x"))
+                        .attr("dy", "1em")
+                        .text(text.slice(last_space_pos + 1));
+                }
+            } else {
+                elem.innerHTML = UI._(key);;
+            }
         })
+        arrangeLabels();
     }
     updateHash();
 }

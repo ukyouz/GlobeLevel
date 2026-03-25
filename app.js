@@ -3,7 +3,7 @@ var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + ""
 var group = svg.append("svg:g");
 const RADIXCHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
 const CHAR2LVLS = (function(){
-    const LEVELS = "012345"
+    const LEVELS = [0,1,2,3,4,5]
     var levels = {};
     for (var i=0; i<6; i++) {
         for (var j=0; j<6; j++) {
@@ -17,7 +17,8 @@ const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
 const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
 let LANGS = {
     "en": {
-        "about-world-level": "About World Level",
+        "about": "About {globe-level}",
+        "globe-level": "Globe Level",
         "level0": "Never been there",
         "level1": "Passed there",
         "level2": "Alighted there",
@@ -35,8 +36,8 @@ let LANGS = {
         "projection.mercator": "Mercator",
         "projection.stereographic": "Stereographic",
         "rotate-snap.free-rotate": "Free Rotate",
-        "rotate-snap.15-deg": "15 deg",
-        "rotate-snap.30-deg": "30 deg",
+        "rotate-snap.15-deg": "± 15 deg",
+        "rotate-snap.30-deg": "± 30 deg",
     },
 }
 class Lang {
@@ -126,28 +127,19 @@ d3.json("map/map.topojson", function (world) {
         UI.setArea(d.id, d.id);
 
         const center = getLabelCentroid(d);
-        var bg = addLabel(d3.select(this).append("text"), center, d.id);
-        var fg = addLabel(d3.select(this).append("text"), center, d.id);
+        var {fg, bg} = addShadowLabel(d3.select(this), center, INIT_FONTSIZE, d.id);
+        initRegionLabel(bg, d.id);
+        initRegionLabel(fg, d.id);
         bg.attr("class", "place place-outline")
             .attr("stroke", "white")
             .attr("stroke-width", "2")
         fg.attr("class", "place place-label")
     })
 
-	params = parseQuery(window.location.search);
-    group.append("text")
-        .attr("x", "40")
-        .attr("y", height - 40)
-        .attr("font-size", "32")
-        .text(params.t || "")
-        .attr("stroke", "white")
-        .attr("stroke-width", "4")
-    group.append("text")
-        .attr("x", "40")
-        .attr("y", height - 40)
-        .attr("font-size", "32")
-        .text(params.t || "")
+    addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a,b)=>a+b));
 
+	params = parseQuery(window.location.search);
+    addShadowLabel(group, [40, height - 40], 32, params.t || "");
 
     projection.rotate([rot[0], rot[1], 0])
     switchProjection(projId);
@@ -157,13 +149,29 @@ d3.json("map/map.topojson", function (world) {
     arrangeLabels();
 });
 
-function addLabel(d3Node, center, text) {
+function addTitleLabel(d3Node, lvl) {
+    addShadowLabel(d3Node, [40, 100], 42, UI._("globe-level") + " " + lvl);
+}
+
+function addShadowLabel(group, position, fontSize, text="") {
+    let bg = group.append("text")
+        .attr("x", position[0])
+        .attr("y", position[1])
+        .attr("font-size", fontSize)
+        .text(text)
+        .attr("stroke", "white")
+        .attr("stroke-width", "4")
+    let fg = group.append("text")
+        .attr("x", position[0])
+        .attr("y", position[1])
+        .attr("font-size", fontSize)
+        .text(text)
+    return {fg, bg};
+}
+
+function initRegionLabel(d3Node, text) {
     d3Node
     .attr("text-anchor", "middle")
-    .attr("font-size", INIT_FONTSIZE + "px")
-    .style("display", isNaN(center[0]) ? "none": null)
-    .attr("x", center[0] || 0)
-    .attr("y", center[1] || 0)
     .attr("i18n", text)
     .on("click", function(d) {
         if (d3.event.defaultPrevented) return;
@@ -171,8 +179,6 @@ function addLabel(d3Node, center, text) {
         showPopup(text, d3.event.pageX, d3.event.pageY);
     })
     .on("dblclick", function(){d3.event.stopPropagation()})
-
-    return d3Node;
 }
 
 svg.call(d3.drag()
@@ -402,9 +408,18 @@ function setCountryLevel(id, level) {
         .attr("level", level)
         .attr("fill", levelColors[level]);
     updateHash();
+    updateTitle();
 }
 d3.select(document).on("click", hidePopup);
 
+function updateTitle() {
+    const hashs = readHash();
+    const title = document.querySelector("#level");
+    if (title) {
+        title.innerHTML = "";
+        addTitleLabel(d3.select(title), hashs.lvl.reduce((a,b)=>a+b));
+    }
+}
 
 function updateHash() {
     const projId = document.querySelector("#proj-select").value;
@@ -429,6 +444,7 @@ function updateHash() {
         hashs.la = lang;
     }
     window.location = encodeQuery("#", hashs);
+    return hashs;
 }
 
 function readHash() {
@@ -438,7 +454,7 @@ function readHash() {
         "projId": parseInt(hash.p != undefined ? hash.p: "0"),
         "k": parseFloat(hash.k != undefined ? hash.k : `${INIT_K}`),
         "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
-        "lvl": decodeLevels(hash.l || ""),
+        "lvl": decodeLevels(hash.l || "0"),
         "locale": hash.la || "en",
     }
 }
@@ -558,6 +574,9 @@ async function loadData(path, callback) {
     }
 }
 
+function fmt(fmtstr, ...values) {
+    return fmtstr.replace(/{.+}/g, (match, i) => values[i] || UI._(match.slice(1, match.length - 1)));
+}
 function translateUI(lang="en") {
     if (!UI.hasLocale(lang)) {
         loadData(`lang/${lang}.json`, function(data) {
@@ -596,10 +615,11 @@ function translateUI(lang="en") {
                         .text(text.slice(last_space_pos + 1));
                 }
             } else {
-                elem.innerHTML = UI._(key);;
+                elem.innerHTML = fmt(UI._(key));
             }
         })
         arrangeLabels();
     }
     updateHash();
+    updateTitle();
 }

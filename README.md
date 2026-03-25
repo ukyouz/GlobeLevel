@@ -1,12 +1,32 @@
-[CodePen Test](https://codepen.io/zhung/pen/GRKdJZG?editors=1010)
+# GlobeLevel
+
+A simple map to showcase your world traveling footprint
+
+![Globe Map](map/globe.png)
 
 ## Concept
 
-Based on the JapanEx and TaiwanEx project, I decided to make a global version. However, everything goes much more complicated than I think as diving into this project, as, apparently, the area I need to cover for whole world is much larger than that for a single country. Secondly, the credit score is now calculated by a country unit instead of a county equivalent unit, so the game can still be fun and easy to play. Even though, the number of territory layers is large. In previous two projects, the maps for Japan and Taiwan are re-drawn with Illustrator, and there are only 47 and 24 counties for Japan and Taiwan respectively, so maybe I should draw a world map like before, uh, for just only 241 countries … uh that’s a lot, and I have to figure out how to arrange them all in proper positions, trying not to lose too much their original boundary shapes. Finally I turn to use the open-sourced world map GeoJSON file.
+Based on the [JapanEx](https://zhung.com.tw/japanex) and [TaiwanEx](https://zhung.com.tw/taiwanex) project, I decided to make a global version. However, everything goes much more complicated than I think as diving into this project.
 
-## Design
+1. The area I need to cover for whole world is much larger than that for a single country, and I do NOT want to use the existing _realistic_ world map shape.
+2. I want to render the map in 3D globe view, rather than 2D which used for the previous two projects, so the convertion between 2D svg and coordinates GeoJSON becomes an issue.
+3. How many regions I need to draw is kind of geopolitics. There are 47 and 24 counties for Japan and Taiwan respectively, this is an official truth. But, how many countries there are in the world is not and can be disputed.
 
-To make area outside the Earth draggable, the projection for dragging and that for rendering are different.
+Anyway, I started drawing a world map like before, figuring out how to arrange those 199 regions all in proper positions, without lose too much their original boundary shapes.
+
+### Regions Rule
+
+The 199 regions chosen in the world is based on the following rules:
+
+- 193: [Member states of the United Nations](https://www.un.org/en/about-us/member-states)
+- 3: The regions and the main land are separated by other sovereign states.
+    - Greenland (Denmark)
+    - New Caledonia (France)
+    - Guyane (France)
+- 3: Chosen for personal reason.
+    - Antarctica
+    - Taiwan
+    - Vantican City
 
 ## Data Sources
 

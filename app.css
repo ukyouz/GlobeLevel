@@ -87,16 +87,12 @@ svg {
 
     /*min-width: 320px;*/
     /*min-height: 320px;*/
-    cursor: move;
-    /* fallback if grab cursor is unsupported */
-    cursor: grab;
-    cursor: -moz-grab;
-    cursor: -webkit-grab;
-
     user-select: none;
 }
 
-svg.dragging {
+svg.dragging path,
+svg.dragging path[id],
+svg.dragging text.place {
     cursor: grabbing;
     cursor: -moz-grabbing;
     cursor: -webkit-grabbing;
@@ -109,6 +105,14 @@ svg text {
 
 svg text.place-label:hover {
     stroke: #3e6ffe;
+}
+
+svg path {
+    cursor: move;
+    /* fallback if grab cursor is unsupported */
+    cursor: grab;
+    cursor: -moz-grab;
+    cursor: -webkit-grab;
 }
 
 svg text.place,

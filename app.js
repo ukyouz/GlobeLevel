@@ -34,7 +34,7 @@ let LANGS = {
         "projection.natural-earth": "Natural Earth",
         "projection.equirectangular": "Equirectangular",
         "projection.mercator": "Mercator",
-        "projection.stereographic": "Stereographic",
+        "projection.azimuthal-equal-area": "Azimuthal Equal-Area",
         "rotate-snap.free-rotate": "Free Rotate",
         "rotate-snap.15-deg": "± 15 deg",
         "rotate-snap.30-deg": "± 30 deg",
@@ -69,14 +69,15 @@ const INIT_SCALE = 160;
 const INIT_K = 2.5;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
-    { name: 'Orthographic', object: d3.geoOrthographic().clipAngle(90), scale: INIT_SCALE },
-    { name: 'Natural Earth', object: d3.geoNaturalEarth1(),             scale: INIT_SCALE },
-    { name: 'Equirectangular', object: d3.geoEquirectangular(),         scale: INIT_SCALE },
-    { name: 'Mercator',      object: d3.geoMercator(),                  scale: INIT_SCALE },
-    { name: 'Stereographic', object: d3.geoStereographic().clipAngle(179), scale: INIT_SCALE },
+    d3.geoOrthographic().clipAngle(90),
+    d3.geoNaturalEarth1(),
+    d3.geoEquirectangular(),
+    d3.geoMercator(),
+    // d3.geoStereographic().clipAngle(179),
+    d3.geoAzimuthalEqualArea(),
 ];
 var projectionIndex = 0;
-var projection = PROJECTIONS[0].object.scale(INIT_SCALE).translate([width / 2, height / 2]);
+var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
 
 d3.json("map/map.topojson", function (world) {
@@ -309,7 +310,7 @@ function toggleLabel(show) {
 // and breaks across antimeridian or under heavy projection distortion.
 function getLabelCentroid(d) {
     if (!d || !d.geometry) return [NaN, NaN];
-    if (projection == PROJECTIONS[0].object) {
+    if (projection == PROJECTIONS[0]) {
         return path.centroid(d);       // geographic [lon, lat] — projection-independent
     }
     var feature = d;
@@ -328,13 +329,13 @@ function getLabelCentroid(d) {
 
 function switchProjection(index) {
     projectionIndex = +index;
-    var config = PROJECTIONS[projectionIndex];
-    config.object
+    var object = PROJECTIONS[projectionIndex];
+    object
         .scale(projection.scale())
         .translate(projection.translate())
         .rotate(projection.rotate());
-    path.projection(config.object);
-    projection = config.object
+    path.projection(object);
+    projection = object
     draw();
     arrangeLabels();
     arrangePopup();

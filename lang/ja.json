@@ -17,6 +17,7 @@
     "projection.equirectangular": "正距円筒図法",
     "projection.mercator": "メルカトル図法",
     "projection.stereographic": "平射方位図法",
+    "projection.azimuthal-equal-area": "正積方位図法",
     "rotate-snap.free-rotate": "自由に回転",
     "rotate-snap.15-deg": "± 15 度",
     "rotate-snap.30-deg": "± 30 度",

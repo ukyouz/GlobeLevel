@@ -78,7 +78,7 @@ var projectionIndex = 0;
 var projection = PROJECTIONS[0].object.scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
 
-d3.json("test/map.topojson", function (world) {
+d3.json("map/map.topojson", function (world) {
     console.log(world)
     const {projId, k, rot, lvl, locale} = readHash();
 

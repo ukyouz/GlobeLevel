@@ -66,12 +66,11 @@ const INIT_SCALE = 160;
 const INIT_K = 2.5;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
-    d3.geoOrthographic().clipAngle(90),
-    d3.geoNaturalEarth1(),
-    d3.geoEquirectangular(),
-    d3.geoMercator(),
-    // d3.geoStereographic().clipAngle(179),
-    d3.geoAzimuthalEqualArea(),
+    d3.geoOrthographic().clipAngle(90).precision(0.5),
+    d3.geoNaturalEarth1().precision(0.5),
+    d3.geoEquirectangular().precision(0.5),
+    d3.geoMercator().precision(0.5),
+    d3.geoAzimuthalEqualArea().precision(0.5),
 ];
 var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
@@ -92,6 +91,8 @@ d3.json("map/map.topojson", function (world) {
         .attr("class", "sphere")
         .attr("d", path)
         .attr("fill", "#9EC3FB")
+        .attr("stroke", "#d1e3ff")
+        .attr("stroke-width", "4")
         .on("dblclick", function () { d3.event.stopPropagation() })
 
     var countries = topojson.feature(world, world.objects.collection);
@@ -217,6 +218,7 @@ var inertia = d3.inertiaHelper({
         if (timerId) clearTimeout(timerId);
         timerId = setTimeout(() => {
             cancelInertial = true;
+            updateHash();
         }, 100);
     },
     end: function () {
@@ -230,6 +232,7 @@ var inertia = d3.inertiaHelper({
         );
         q10 = versor(projection.rotate());
         v11 = versor.cartesian(projection.invert(inertia.position));
+        updateHash();
     },
     render: function (t) {
         if (cancelInertial) {
@@ -244,6 +247,8 @@ var inertia = d3.inertiaHelper({
         draw();
         arrangeLabels();
         arrangePopup();
+        if (t >= 1.0)
+            updateHash();
     },
     time: 1700,
 });
@@ -597,7 +602,8 @@ function toDataURL(width, height) {
 function saveAsImage(elem) {
     const svg = document.querySelector("svg");
     const bbox = svg.getBBox();
-    var png = toDataURL(bbox.width, bbox.height);
+    const dpi = window.devicePixelRatio;
+    var png = toDataURL(bbox.width * dpi, bbox.height * dpi);
     elem.setAttribute('href', png);
     // window.open(png, 'japanex.png');
 };

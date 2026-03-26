@@ -90,14 +90,6 @@ svg {
     user-select: none;
 }
 
-svg.dragging path,
-svg.dragging path[id],
-svg.dragging text.place {
-    cursor: grabbing;
-    cursor: -moz-grabbing;
-    cursor: -webkit-grabbing;
-}
-
 svg text {
     font-family: sans-serif;
     transition: color .3s;
@@ -110,9 +102,9 @@ svg text.place-label:hover {
 svg path {
     cursor: move;
     /* fallback if grab cursor is unsupported */
-    cursor: grab;
+    /* cursor: grab;
     cursor: -moz-grab;
-    cursor: -webkit-grab;
+    cursor: -webkit-grab; */
 }
 
 svg text.place,
@@ -251,7 +243,15 @@ svg path[id][levelcolor=blue]:hover {
     fill: #50b5f8;
 }
 
-.share {
+.top-right {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    text-align: right;
+    user-select: none;
+}
+
+.bottom-right {
     position: absolute;
     bottom: 1em;
     right: 1em;
@@ -259,27 +259,29 @@ svg path[id][levelcolor=blue]:hover {
     user-select: none;
 }
 
-.config {
-    bottom: calc(1em + 29px + 0.5em);
-}
-
-.config .btn,
-.share .btn {
+.inputs input[type=text],
+.inputs .btn {
     background: #fff;
     border: 1px solid #aaa;
     border-radius: 4px;
     padding: 0px 10px;
     margin: 6px 0 0;
     color: black;
-    cursor: pointer;
-    display: inline-block;
-    line-height: 27px;
-    font-size: 0.75em;
     text-decoration: none;
     vertical-align: bottom;
+    line-height: 27px;
+    font-size: 0.75em;
+    display: inline-block;
 }
 
-.config select,
-.share select {
+.inputs input[type=checkbox] {
+    vertical-align: center;
+}
+
+.inputs .btn {
+    cursor: pointer;
+}
+
+.inputs select {
     height: 29px;
 }

@@ -2,12 +2,12 @@ var width = window.innerWidth, height = window.innerHeight;
 var svg = d3.select("svg").attr("viewBox", "0, 0, " + width + ", " + height + "")
 var group = svg.append("svg:g");
 const RADIXCHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
-const CHAR2LVLS = (function(){
-    const LEVELS = [0,1,2,3,4,5]
+const CHAR2LVLS = (function () {
+    const LEVELS = [0, 1, 2, 3, 4, 5]
     var levels = {};
-    for (var i=0; i<6; i++) {
-        for (var j=0; j<6; j++) {
-            let pos = i*6 + j;
+    for (var i = 0; i < 6; i++) {
+        for (var j = 0; j < 6; j++) {
+            let pos = i * 6 + j;
             levels[RADIXCHARS[pos]] = [LEVELS[i], LEVELS[j]]
         }
     }
@@ -35,9 +35,6 @@ let LANGS = {
         "projection.equirectangular": "Equirectangular",
         "projection.mercator": "Mercator",
         "projection.azimuthal-equal-area": "Azimuthal Equal-Area",
-        "rotate-snap.free-rotate": "Free Rotate",
-        "rotate-snap.15-deg": "± 15 deg",
-        "rotate-snap.30-deg": "± 30 deg",
     },
 }
 class Lang {
@@ -57,7 +54,7 @@ class Lang {
     hasLocale(locale) {
         return LANGS[locale] != undefined;
     }
-    setLocale(locale, data=null) {
+    setLocale(locale, data = null) {
         if (data)
             LANGS[locale] = data;
         this.active = LANGS[locale];
@@ -79,67 +76,72 @@ const PROJECTIONS = [
 var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
+var lastZoomK = 1;
+var zoom = d3.zoom()
+    .scaleExtent([1, 50])
+    .on("zoom", onzoom);
+
 
 d3.json("map/map.topojson", function (world) {
     console.log(world)
-    const {projId, k, rot, lvl, locale} = readHash();
+    const { projId, k, rot, lvl, locale } = readHash();
 
     // Ocean (sphere background)
     group.append("path")
-        .datum({type: "Sphere"})
+        .datum({ type: "Sphere" })
         .attr("class", "sphere")
         .attr("d", path)
         .attr("fill", "#9EC3FB")
-        .on("dblclick", function(){d3.event.stopPropagation()})
+        .on("dblclick", function () { d3.event.stopPropagation() })
 
     var countries = topojson.feature(world, world.objects.collection);
 
     // Areas
     var nodes = group.append("g").selectAll("g").data(countries.features).enter()
-        .each(function(d, index) {
+        .each(function (d, index) {
             d3.select(this)
-            .append("g")
-            .attr("class", "node")
-            .append("path")
-            .attr("d", path)
-            .attr("id", function (d) {
-                return d.id;
-            })
-            .attr("stroke", "black")
-            .attr("stroke-linejoin", "round")
-            .attr("fill", "#fff")
-            .on("click", function(d) {
-                if (d3.event.defaultPrevented) return;
-                d3.event.stopPropagation();
-                showPopup(d.id, d3.event.pageX, d3.event.pageY);
-            })
-            .on("dblclick", function(){d3.event.stopPropagation()})
+                .append("g")
+                .attr("class", "node")
+                .append("path")
+                .attr("d", path)
+                .attr("id", function (d) {
+                    return d.id;
+                })
+                .attr("stroke", "black")
+                .attr("stroke-linejoin", "round")
+                .attr("fill", "#fff")
+                .on("click", function (d) {
+                    if (d3.event.defaultPrevented) return;
+                    d3.event.stopPropagation();
+                    showPopup(d.id, d3.event.pageX, d3.event.pageY);
+                })
+                .on("dblclick", function () { d3.event.stopPropagation() })
             if (lvl[index]) {
                 setCountryLevel(d.id, lvl[index]);
             }
         })
 
     // country labels — sorted by area descending so larger countries have higher priority
-    var sortedFeatures = countries.features.slice().sort(function(a, b) {
+    var sortedFeatures = countries.features.slice().sort(function (a, b) {
         return d3.geoArea(b) - d3.geoArea(a);
     });
     nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
-    .append("g").each(function(d) {
-        UI.setArea(d.id, d.id);
+        .append("g").each(function (d) {
+            UI.setArea(d.id, d.id);
 
-        const center = getLabelCentroid(d);
-        var {fg, bg} = addShadowLabel(d3.select(this), center, INIT_FONTSIZE, d.id);
-        initRegionLabel(bg, d.id);
-        initRegionLabel(fg, d.id);
-        bg.attr("class", "place place-outline")
-            .attr("stroke", "white")
-            .attr("stroke-width", "2")
-        fg.attr("class", "place place-label")
-    })
+            const center = getLabelCentroid(d);
+            var { fg, bg } = addShadowLabel(d3.select(this), center, INIT_FONTSIZE, d.id);
+            initRegionLabel(bg, d.id);
+            initRegionLabel(fg, d.id);
+            bg.attr("class", "place place-outline")
+                .attr("stroke", "white")
+                .attr("stroke-width", "2")
+            fg.attr("class", "place place-label")
+        })
 
-    addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a,b)=>a+b));
+    addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
 
-	params = parseQuery(window.location.search);
+    params = parseQuery(window.location.search);
     addShadowLabel(group, [40, height - 40], 32, params.t || "");
 
     projection.rotate([rot[0], rot[1], 0])
@@ -154,7 +156,7 @@ function addTitleLabel(d3Node, lvl) {
     addShadowLabel(d3Node, [40, 100], 42, UI._("globe-level") + " " + lvl);
 }
 
-function addShadowLabel(group, position, fontSize, text="") {
+function addShadowLabel(group, position, fontSize, text = "") {
     let bg = group.append("text")
         .attr("x", position[0])
         .attr("y", position[1])
@@ -167,78 +169,112 @@ function addShadowLabel(group, position, fontSize, text="") {
         .attr("y", position[1])
         .attr("font-size", fontSize)
         .text(text)
-    return {fg, bg};
+    return { fg, bg };
 }
 
 function initRegionLabel(d3Node, text) {
     d3Node
-    .attr("text-anchor", "middle")
-    .attr("i18n", text)
-    .on("click", function(d) {
-        if (d3.event.defaultPrevented) return;
-        d3.event.stopPropagation();
-        showPopup(text, d3.event.pageX, d3.event.pageY);
-    })
-    .on("dblclick", function(){d3.event.stopPropagation()})
+        .attr("text-anchor", "middle")
+        .attr("i18n", text)
+        .on("click", function (d) {
+            if (d3.event.defaultPrevented) return;
+            d3.event.stopPropagation();
+            showPopup(text, d3.event.pageX, d3.event.pageY);
+        })
+        .on("dblclick", function () { d3.event.stopPropagation() })
 }
+
+var timerId = null, cancelInertial = false;
+var v0, // Mouse position in Cartesian coordinates at start of drag gesture.
+    r0, // Projection rotation as Euler angles at start.
+    q0, // Projection rotation as versor at start.
+    v10, // Mouse position in Cartesian coordinates just before end of drag gesture.
+    v11, // Mouse position in Cartesian coordinates at end.
+    q10; // Projection rotation as versor at end.
+var inertia = d3.inertiaHelper({
+    start: function () {
+        v0 = versor.cartesian(projection.invert(inertia.position));
+        r0 = projection.rotate();
+        q0 = versor(r0);
+        cancelInertial = false;
+        // opt.start && opt.start();
+    },
+    move: function () {
+        r0[2] = 0;
+        var inv = projection.rotate(r0).invert(inertia.position);
+        if (isNaN(inv[0])) return;
+        var v1 = versor.cartesian(inv),
+            q1 = versor.multiply(q0, versor.delta(v0, v1)),
+            r1 = versor.rotation(q1);
+        // opt.render(r1);
+        // opt.move && opt.move();
+        projection.rotate([r1[0], r1[1], 0])
+
+        draw();
+        arrangeLabels();
+        arrangePopup();
+
+        if (timerId) clearTimeout(timerId);
+        timerId = setTimeout(() => {
+            cancelInertial = true;
+        }, 100);
+    },
+    end: function () {
+        // velocity
+        v10 = versor.cartesian(
+            projection.invert(
+                inertia.position.map(function (d, i) {
+                    return d - inertia.velocity[i] / 1000;
+                })
+            )
+        );
+        q10 = versor(projection.rotate());
+        v11 = versor.cartesian(projection.invert(inertia.position));
+    },
+    render: function (t) {
+        if (cancelInertial) {
+            return
+        };
+        if (timerId) clearTimeout(timerId);
+        var r1 = versor.rotation(
+            versor.multiply(q10, versor.delta(v10, v11, t * 140))
+        );
+        // opt.render && opt.render(rotation);
+        projection.rotate([r1[0], r1[1], 0])
+        draw();
+        arrangeLabels();
+        arrangePopup();
+    },
+    time: 1700,
+});
+
+
 
 svg.call(d3.drag()
-    .on("start", dragstart)
-    .on("drag", dragging)
-    .on("end", function () {
-        svg.attr("class", null);
-        arrangeLabels();
-        updateHash();
-    })
+    .on("start", inertia.start)
+    .on("drag", inertia.move)
+    .on("end", inertia.end)
 );
-var v0, r0, q0;
-function dragstart() {
-    const mousePos = d3.mouse(this);
-    v0 = versor.cartesian(projection.invert(mousePos));
-    r0 = projection.rotate();
-    q0 = versor(r0);
-    svg.attr("class", "dragging");
-    arrangePopup();
-}
-function dragging() {
-    const mousePos = d3.mouse(this);
-    var v1 = versor.cartesian(projection.rotate(r0).invert(mousePos)),
-        q1 = versor.multiply(q0, versor.delta(v0, v1)),
-        r1 = versor.rotation(q1);
-
-    const snapDegree = parseInt(document.querySelector("#snap-select").value);
-    if (snapDegree) {
-        const a = Math.round(r1[0] / snapDegree) * snapDegree;
-        const b = Math.round(r1[1] / snapDegree) * snapDegree;
-        projection.rotate([a, b, r0[2]]);
-    } else {
-        projection.rotate([r1[0], r1[1], r0[2]]);
-    }
-    draw();
-    arrangePopup();
-}
 
 
 function draw() {
+    let r = projection.rotate();
+    projection.rotate([r[0], r[1], 0])
     svg.selectAll("path").attr("d", path);
-    svg.selectAll("text.place").each(function(d) {
+    svg.selectAll("text.place").each(function (d) {
         var c = getLabelCentroid(d);
         d3.select(this)
-        .attr("x", isNaN(c[0]) ? 0 : c[0])
-        .attr("y", isNaN(c[1]) ? 0 : c[1])
-        .selectAll("tspan")
-        .attr("x", isNaN(c[0]) ? 0 : c[0])
+            .attr("x", isNaN(c[0]) ? 0 : c[0])
+            .attr("y", isNaN(c[1]) ? 0 : c[1])
+            .selectAll("tspan")
+            .attr("x", isNaN(c[0]) ? 0 : c[0])
     })
 
     arrangeLabels();
 }
 
 
-var zoom = d3.zoom()
-    .scaleExtent([1, 50])
-    .on("zoom", onzoom);
 svg.call(zoom);
-var lastZoomK = 1;
 svg.call(zoom.transform, d3.zoomIdentity.scale(INIT_K))
 function onzoom() {
     var s = projection.scale() * d3.event.transform.k / lastZoomK;
@@ -266,7 +302,7 @@ function arrangeLabels() {
 
     var shown = [];
     svg.selectAll("text.place-outline")
-        .each(function(d) {
+        .each(function (d) {
             const geo = getLabelCentroid(d);
             var isShown = true;
             if (d3.select(this).attr("disabled") == "true") isShown = false;
@@ -282,13 +318,13 @@ function arrangeLabels() {
             }
 
             d3.select(this)
-            .attr("shown", isShown)
-            .style("display", function(d) {
-                if (!isShown) return "none"
-                // Store a plain object copy (not a live DOMRect)
-                shown.push({ x: b.x, y: b.y, width: b.width, height: b.height });
-                return null; // Show (remove inline style override)
-            });
+                .attr("shown", isShown)
+                .style("display", function (d) {
+                    if (!isShown) return "none"
+                    // Store a plain object copy (not a live DOMRect)
+                    shown.push({ x: b.x, y: b.y, width: b.width, height: b.height });
+                    return null; // Show (remove inline style override)
+                });
         })
     svg.selectAll("text.place-outline[shown=false] ~ text.place-label")
         .style("display", "none")
@@ -310,18 +346,20 @@ function toggleLabel(show) {
 // and breaks across antimeridian or under heavy projection distortion.
 function getLabelCentroid(d) {
     if (!d || !d.geometry) return [NaN, NaN];
-    if (projection == PROJECTIONS[0]) {
-        return path.centroid(d);       // geographic [lon, lat] — projection-independent
-    }
     var feature = d;
     if (d.geometry.type === 'MultiPolygon') {
         var largest = null, largestArea = 0;
-        d.geometry.coordinates.forEach(function(coords) {
+        d.geometry.coordinates.forEach(function (coords) {
             var poly = { type: 'Feature', geometry: { type: 'Polygon', coordinates: coords } };
             var a = d3.geoArea(poly);
             if (a > largestArea) { largestArea = a; largest = poly; }
         });
         if (largest) feature = largest;
+    }
+    if (projection == PROJECTIONS[0]) {
+        if (largestArea < 0.015)
+            return path.centroid(d);
+        return path.centroid(feature);
     }
     var geo = d3.geoCentroid(feature);       // geographic [lon, lat] — projection-independent
     return projection(geo) || [NaN, NaN];    // null when clipped (back hemisphere)
@@ -369,7 +407,7 @@ function arrangePopup() {
     if (!projected) return; // country rotated to back hemisphere
     var client = svgToClient(projected[0], projected[1]);
     popup.style("left", client.x + "px")
-         .style("top",  client.y + "px");
+        .style("top", client.y + "px");
 }
 
 var popup = d3.select("#form");
@@ -379,8 +417,8 @@ var levelBtns = popup.selectAll(".level-btn")
     .append("label")
     .attr("class", (d) => `label lang level ${d}`)
     // .text(function(d, i) { return UI[`level${i}`]; })
-    .attr("i18n", (d,i) => `level${i}`)
-    .on("click", function(d, i) {
+    .attr("i18n", (d, i) => `level${i}`)
+    .on("click", function (d, i) {
         d3.event.stopPropagation();
         setCountryLevel(activeAreaId, i);
         hidePopup();
@@ -392,10 +430,10 @@ function showPopup(id, clientX, clientY) {
     popup.select(".place-name").text(UI.area(id));
     popup.style("display", "block")
         .style("left", clientX + "px")
-        .style("top",  clientY + "px");
+        .style("top", clientY + "px");
     popup.select(".search")
-        .attr("href", 'https://google.com/search?q='+id)
-        .attr("title", 'Search: '+id)
+        .attr("href", 'https://google.com/search?q=' + id)
+        .attr("title", 'Search: ' + id)
 }
 function hidePopup() {
     popup.style("display", "none");
@@ -404,7 +442,7 @@ function hidePopup() {
 }
 function setCountryLevel(id, level) {
     if (!id) return;
-    svg.selectAll(".node path").filter(function(d) { return d.id === id; })
+    svg.selectAll(".node path").filter(function (d) { return d.id === id; })
         .attr("levelcolor", levelColorNames[level])
         .attr("level", level)
         .attr("fill", levelColors[level]);
@@ -418,7 +456,7 @@ function updateTitle() {
     const title = document.querySelector("#level");
     if (title) {
         title.innerHTML = "";
-        addTitleLabel(d3.select(title), hashs.lvl.reduce((a,b)=>a+b));
+        addTitleLabel(d3.select(title), hashs.lvl.reduce((a, b) => a + b));
     }
 }
 
@@ -452,7 +490,7 @@ function readHash() {
     const hash = parseQuery(window.location.hash);
     const rot = (hash.r != undefined ? hash.r : "0.0,0.0").split(",")
     return {
-        "projId": parseInt(hash.p != undefined ? hash.p: "0"),
+        "projId": parseInt(hash.p != undefined ? hash.p : "0"),
         "k": parseFloat(hash.k != undefined ? hash.k : `${INIT_K}`),
         "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
         "lvl": decodeLevels(hash.l || "0"),
@@ -476,8 +514,8 @@ function encodeLevels() {
     const areas = document.querySelectorAll("path[id]")
     const levels = [...areas].map(e => e.attributes.level ? parseInt(e.attributes.level.value) : 0);
     let bignum = "";  // little endian in 32 based
-    for (var i=0; i<areas.length; i+=2) {
-        bignum += RADIXCHARS[levels[i] * 6 + (levels[i+1] || 0)]
+    for (var i = 0; i < areas.length; i += 2) {
+        bignum += RADIXCHARS[levels[i] * 6 + (levels[i + 1] || 0)]
     }
     return bignum.replace(/0+$/, "")
         .replace(/00000000000/g, "_")
@@ -495,7 +533,7 @@ function decodeLevels(bignum) {
         .replace(/F/g, "00000")
         .replace(/S/g, "0000000")
         .replace(/_/g, "00000000000")
-    for (var i=0; i<rawbignum.length; i++) {
+    for (var i = 0; i < rawbignum.length; i++) {
         let lvls = CHAR2LVLS[rawbignum[i]];
         levels.push(...lvls);
     }
@@ -514,16 +552,16 @@ function encodeQuery(prefix, map) {
     }
 }
 
-function parseQuery(search){
-	params = {};
-	queries = search.substring(1).split("&");
-	queries.forEach(function(val){
-		query = val.split("=");
-		if(query.length==2)
-			params[query[0]] = decodeURI(query[1]);
-	});
+function parseQuery(search) {
+    params = {};
+    queries = search.substring(1).split("&");
+    queries.forEach(function (val) {
+        query = val.split("=");
+        if (query.length == 2)
+            params[query[0]] = decodeURI(query[1]);
+    });
 
-	return params;
+    return params;
 }
 
 function clearLevels() {
@@ -539,29 +577,29 @@ function clearLevels() {
     window.location.reload();
 }
 
-function setAuthor(){
-	p = parseQuery(window.location.search);
-	answer = prompt(UI._("ask-for-name"), p.t);
-	if(answer!=null){
-		window.location.search = "t="+encodeURI(answer);
-	}
+function setAuthor() {
+    p = parseQuery(window.location.search);
+    answer = prompt(UI._("ask-for-name"), p.t);
+    if (answer != null) {
+        window.location.search = "t=" + encodeURI(answer);
+    }
 }
 
-function toDataURL (width, height) {
-	var svgString = new XMLSerializer().serializeToString(document.querySelector('svg'));
-	var canvas = document.createElement('canvas');
-	canvas.width = width;
-	canvas.height = height;
-	canvg(canvas, svgString);
-	return canvas.toDataURL("image/png");
+function toDataURL(width, height) {
+    var svgString = new XMLSerializer().serializeToString(document.querySelector('svg'));
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvg(canvas, svgString);
+    return canvas.toDataURL("image/png");
 }
 
 function saveAsImage(elem) {
     const svg = document.querySelector("svg");
     const bbox = svg.getBBox();
-	var png = toDataURL(bbox.width, bbox.height);
-	elem.setAttribute('href', png);
-	// window.open(png, 'japanex.png');
+    var png = toDataURL(bbox.width, bbox.height);
+    elem.setAttribute('href', png);
+    // window.open(png, 'japanex.png');
 };
 
 async function loadData(path, callback) {
@@ -578,15 +616,15 @@ async function loadData(path, callback) {
 function fmt(fmtstr, ...values) {
     return fmtstr.replace(/{.+}/g, (match, i) => values[i] || UI._(match.slice(1, match.length - 1)));
 }
-function translateUI(lang="en") {
+function translateUI(lang = "en") {
     if (!UI.hasLocale(lang)) {
-        loadData(`lang/${lang}.json`, function(data) {
+        loadData(`lang/${lang}.json`, function (data) {
             UI.setLocale(lang, data)
             translateUI(lang);
         });
     } else {
         UI.setLocale(lang)
-        document.querySelectorAll("[i18n]").forEach(function(elem) {
+        document.querySelectorAll("[i18n]").forEach(function (elem) {
             const key = elem.attributes.i18n.value;
 
             if (elem.classList.contains("place")) {

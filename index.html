@@ -29,6 +29,15 @@
 <div class="inputs top-right">
     <!-- <input type="text" placeholder="Search region..."> -->
 </div>
+<div class="inputs right options">
+    <div id="line" class="line">
+        <div class="axis"></div>
+        <div class="mark mid"></div>
+        <a id="speedSlider" class="ball transform-scale" style="top:0px"></a>
+    </div>
+    <a class="btn" onclick="stepZoom(1.414)"><i class="fa-solid fa-plus"></i></a>
+    <a class="btn" onclick="stepZoom(0.71)"><i class="fa-solid fa-minus"></i></a>
+</div>
 <div class="inputs bottom-right">
     <div class="btn" onclick="setAuthor();" i18n="set-name"></div>
     <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="globe.png"><i class="fa-solid fa-camera"></i> <span i18n="screenshot"></span></a>

@@ -66,7 +66,7 @@ let UI = new Lang("en");
 let links = {};
 
 const INIT_SCALE = 160;
-const INIT_K = 2.5;
+const INIT_K = 2.5, MIN_K = 1, MAX_K = 49;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
     d3.geoOrthographic().clipAngle(90).precision(0.5),
@@ -78,9 +78,9 @@ const PROJECTIONS = [
 var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
-var lastZoomK = 1;
+var lastZoomK = MIN_K;
 var zoom = d3.zoom()
-    .scaleExtent([1, 50])
+    .scaleExtent([MIN_K, MAX_K])
     .on("zoom", onzoom);
 
 
@@ -162,6 +162,7 @@ d3.json("map/map.topojson", function (world) {
     projection.rotate([rot[0], rot[1], 0])
     switchProjection(projId);
     svg.call(zoom.transform, d3.zoomIdentity.scale(k))
+    setZoomSlider(k);
     document.querySelector("#proj-select").value = projId;
     translateUI(locale);
     arrangeLabels();
@@ -251,10 +252,8 @@ var inertia = d3.inertiaHelper({
         updateHash();
     },
     render: function (t) {
-        if (cancelInertial) {
-            return
-        };
         if (timerId) clearTimeout(timerId);
+        if (cancelInertial) return;
         var r1 = versor.rotation(
             versor.multiply(q10, versor.delta(v10, v11, t * 140))
         );
@@ -266,12 +265,16 @@ var inertia = d3.inertiaHelper({
         if (t >= 1.0)
             updateHash();
     },
-    time: 1700,
+    time: 1000,
 });
 
 
 
 svg.call(d3.drag()
+    .filter(() => {
+        if (d3.event.touches?.length == 2) return false;  // 2+ fingers = zoom, not drag
+        return true;
+    })
     .on("start", inertia.start)
     .on("drag", inertia.move)
     .on("end", inertia.end)
@@ -312,6 +315,7 @@ function onzoom() {
         .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
     arrangeLabels();
     arrangePopup();
+    setZoomSlider(lastZoomK);
 }
 
 
@@ -716,3 +720,82 @@ function translateUI(lang = "en") {
 loadData("map/links.json", function(data) {
     links = data;
 })
+
+
+var sliderHeight = 180, top_init = scaleToTop(INIT_K);
+var starty, boxtop;
+var dragging = false, dragChange;
+var slider = document.querySelector('#speedSlider');
+document.querySelector("#line .mid").style.top = top_init + "px";
+function logAt(base, n) {
+    return Math.log(n) / Math.log(base);
+}
+function setZoomSlider(scale) {
+    if (!slider) return;
+    let top = scaleToTop(scale);
+    slider.style.top = top + "px"
+}
+function scaleToTop(scale) {
+    return sliderHeight * (1 - logAt(7, scale) / 2);
+}
+function zoomSliderChanged(top) {
+    let k = Math.pow(7, 2 * (1 - top / sliderHeight));
+    svg.call(zoom.transform, d3.zoomIdentity.scale(k.toFixed(2)))
+    arrangeLabels();
+}
+function stepZoom(ratio) {
+    let k = lastZoomK * ratio;
+    if (k > MAX_K) k = MAX_K;
+    if (k < MIN_K) k = MIN_K;
+    svg.call(zoom.transform, d3.zoomIdentity.scale(k.toFixed(2)))
+}
+// define function while drag the bar
+function dragStart(e){
+    dragging = true;
+    dragChange = 0;
+    document.body.style.cursor = '-webkit-grabbing';
+    boxtop = parseInt(slider.style.top); // get left position of box
+    starty = parseInt(e.clientY); // get x coord of touch point
+}
+function draggIng(e){
+    var dist = parseInt(e.clientY) - starty; // calculate dist traveled by touch point
+    var top = (boxtop+dist>sliderHeight) ? sliderHeight : (boxtop+dist<0) ? 0 : boxtop+dist;
+    if(Math.abs(top-sliderHeight*top_init) < 10)
+        top = sliderHeight*top_init;
+
+    slider.style.top = top+"px";
+    zoomSliderChanged(top);
+}
+function dragStop(e){
+    dragging = false;
+    document.body.style.cursor = 'default';
+    var p = parseInt(slider.style.top);
+    zoomSliderChanged(p);
+}
+function lineClick(e){
+    var offset = 0;
+    var el = line;
+    while (el) {
+        offset += (el.offsetTop - el.scrollTop + el.clientTop);
+        el = el.offsetParent;
+    }
+    var top = e.clientY - offset - 10;
+    top = (top>sliderHeight) ? sliderHeight : (top<0) ? 0 : top;
+    if(Math.abs(top-sliderHeight*top_init) < 10)
+        top = sliderHeight*top_init;
+
+    slider.style.top = top+"px";
+    console.log(top)
+    zoomSliderChanged(top);
+}
+if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ){
+    // window.addEventListener("touchstart",function(e){dragging=true},false);
+    slider.addEventListener('touchstart',function(e){e.preventDefault();touchobj=e.changedTouches[0];dragStart(touchobj)},false)
+    slider.addEventListener('touchmove',function(e){e.preventDefault();touchobj=e.changedTouches[0];if(dragging){draggIng(touchobj)}},false)
+    slider.addEventListener('touchend',function(e){e.preventDefault();if(dragging){dragStop()}},false)
+}else{	// simulate touch events with mouse events
+    slider.addEventListener("mousedown",function(e){dragStart(e)},false);
+    window.addEventListener("mousemove",function(e){if(dragging){draggIng(e)}},false);
+    line.addEventListener("mousedown",function(e){lineClick(e);},false);
+    document.addEventListener("mouseup",function(e){if(dragging){dragStop();}},false);
+}

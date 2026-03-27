@@ -28,7 +28,8 @@ let LANGS = {
         "level5": "Lived there",
         "set-name": "Set Name",
         "screenshot": "Screenshot",
-        "show-labels": "Show Labels",
+        "show-labels": "Labels",
+        "show-graticule": "Graticules",
         "confirm-clear-levels": "Are you sure to clear all level colors?",
         "ask-for-name": "Please enter the name you want to show:",
         "projection.orthographic": "3D Globe",
@@ -102,6 +103,7 @@ d3.json("map/map.topojson", function (world) {
       .datum(d3.geoGraticule()())
       .attr("class", "graticule")
       .attr("d", path)
+      .attr("display", "none")
       .attr("fill", "none")
       .attr("stroke", "#d1e3ff")
       .attr("stroke-width", 0.5)
@@ -356,6 +358,14 @@ function toggleLabel(show) {
         svg.selectAll("text.place").attr("disabled", null);
     }
     arrangeLabels()
+}
+
+function toggleGraticule(show) {
+    if (!show) {
+        svg.selectAll("path.graticule").attr("display", "none");
+    } else {
+        svg.selectAll("path.graticule").attr("display", null);
+    }
 }
 
 

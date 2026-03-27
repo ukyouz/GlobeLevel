@@ -539,6 +539,9 @@ function updateHash() {
     return hashs;
 }
 
+const lang_selector = document.querySelector("#lang");
+const supports = Array.from(lang_selector.querySelectorAll("option"), e => e.value);
+const lang_set = window.navigator.language.split('-').pop().toLowerCase();
 function readHash() {
     const hash = parseQuery(window.location.hash);
     const rot = (hash.r != undefined ? hash.r : "0.0,0.0").split(",")
@@ -547,7 +550,7 @@ function readHash() {
         "k": parseFloat(hash.k != undefined ? hash.k : `${INIT_K}`),
         "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
         "lvl": decodeLevels(hash.l || "0"),
-        "locale": hash.la || "en",
+        "locale": hash.la || (supports.indexOf(lang_set) >= 0 ? lang_set : "en"),
     }
 }
 
@@ -677,7 +680,8 @@ function translateUI(lang = "en") {
             translateUI(lang);
         });
     } else {
-        UI.setLocale(lang)
+        UI.setLocale(lang);
+        lang_selector.value = lang;
         document.querySelectorAll("[i18n]").forEach(function (elem) {
             const key = elem.attributes.i18n.value;
 

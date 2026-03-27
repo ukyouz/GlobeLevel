@@ -138,9 +138,12 @@ svg path[id] {
 .form .title {
     display: flex;
     background: #efefef;
-    padding: 4px 0.5em 4px 1em;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+    line-height: 1;
     align-items: center;
     justify-content: space-between;
+    position: relative;
+    white-space: nowrap;
 }
 
 [lang="en"] .form .title {
@@ -150,6 +153,57 @@ svg path[id] {
 .form .title .lang {
     font-weight: 600;
     margin-left: 2px;
+}
+
+.form .links {
+    position: absolute;
+    top: 2em;
+    left: 0.5em;
+    right: 0.5em;
+    /* bottom: 0.5em; */
+    /* overflow-y: scroll; */
+    background: white;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    box-shadow: 2px 4px 6px #c0c0c0;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0.5em;
+    display: none;
+}
+.form.has-external label[for=externLinks] {
+    margin-right: 2px;
+    color: #3f81ec;
+    cursor: pointer;
+}
+
+.form .links::before {
+    content: "";
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    transform: rotate(45deg);
+    background: #fff;
+    top: -4px;
+    left: 0.65em;
+    border: 0px solid #aaa;
+    border-width: 1px 0 0 1px;
+}
+
+.form input#externLinks {
+    display: none;
+}
+.form.has-external input#externLinks:checked + .links {
+    display: block;
+}
+
+.form .links a {
+    display: block;
+    padding: 4px 0;
 }
 
 .form .title .icon-group {

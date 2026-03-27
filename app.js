@@ -19,6 +19,7 @@ let LANGS = {
     "en": {
         "about": "About {globe-level}",
         "globe-level": "Globe Level",
+        "play-in-region": "Play in {}",
         "level0": "Never been there",
         "level1": "Passed there",
         "level2": "Alighted there",
@@ -61,6 +62,7 @@ class Lang {
     }
 }
 let UI = new Lang("en");
+let links = {};
 
 const INIT_SCALE = 160;
 const INIT_K = 2.5;
@@ -94,6 +96,16 @@ d3.json("map/map.topojson", function (world) {
         .attr("stroke", "#d1e3ff")
         .attr("stroke-width", "4")
         .on("dblclick", function () { d3.event.stopPropagation() })
+
+    // ── GRATICULE (grid lines, drawn last = on top) ────────────────
+    group.append("path")
+      .datum(d3.geoGraticule()())
+      .attr("class", "graticule")
+      .attr("d", path)
+      .attr("fill", "none")
+      .attr("stroke", "#d1e3ff")
+      .attr("stroke-width", 0.5)
+      .attr("opacity", 0.5);
 
     var countries = topojson.feature(world, world.objects.collection);
 
@@ -154,7 +166,9 @@ d3.json("map/map.topojson", function (world) {
 });
 
 function addTitleLabel(d3Node, lvl) {
-    addShadowLabel(d3Node, [40, 100], 42, UI._("globe-level") + " " + lvl);
+    let {fg, bg} = addShadowLabel(d3Node, [40, 100], 42, UI._("globe-level") + " " + lvl);
+    fg.attr("font-weight", 800)
+    bg.attr("font-weight", 800)
 }
 
 function addShadowLabel(group, position, fontSize, text = "") {
@@ -416,7 +430,6 @@ function arrangePopup() {
 }
 
 var popup = d3.select("#form");
-popup.append("div").attr("class", "popup-title");
 var levelBtns = popup.selectAll(".level-btn")
     .data(levelColorNames).enter()
     .append("label")
@@ -439,9 +452,24 @@ function showPopup(id, clientX, clientY) {
     popup.select(".search")
         .attr("href", 'https://google.com/search?q=' + id)
         .attr("title", 'Search: ' + id)
+    if (links[id]) {
+        popup.node().classList.add("has-external")
+        let d3Links = popup.select(".links")
+        d3Links.node().innerHTML = "";
+        d3Links.append("span").text(fmt(UI._("play-in-region"), UI.area(id)))
+        for (var [title, href] of Object.entries(links[id])) {
+            d3Links.append("a")
+                .attr("href", href)
+                .attr("target", "_blank")
+                .text(title)
+        }
+    } else {
+        popup.node().classList.remove("has-external")
+    }
 }
 function hidePopup() {
     popup.style("display", "none");
+    popup.select("input[type=checkbox]").node().checked = false;
     activeAreaId = null;
     activeGeoCentroid = null;
 }
@@ -454,7 +482,13 @@ function setCountryLevel(id, level) {
     updateHash();
     updateTitle();
 }
-d3.select(document).on("click", hidePopup);
+document.addEventListener("click", function(e) {
+    console.log(e.target)
+    if (!e.target.classList.contains("close") && e.target.closest("#form")) {
+        return;
+    }
+    hidePopup();
+});
 
 function updateTitle() {
     const hashs = readHash();
@@ -620,7 +654,7 @@ async function loadData(path, callback) {
 }
 
 function fmt(fmtstr, ...values) {
-    return fmtstr.replace(/{.+}/g, (match, i) => values[i] || UI._(match.slice(1, match.length - 1)));
+    return fmtstr.replace(/{.*}/g, (match) => values.pop() || UI._(match.slice(1, match.length - 1)));
 }
 function translateUI(lang = "en") {
     if (!UI.hasLocale(lang)) {
@@ -668,3 +702,7 @@ function translateUI(lang = "en") {
     updateHash();
     updateTitle();
 }
+
+loadData("map/links.json", function(data) {
+    links = data;
+})

@@ -79,10 +79,6 @@ var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
 var lastZoomK = MIN_K;
-var zoom = d3.zoom()
-    .scaleExtent([MIN_K, MAX_K])
-    .on("zoom", onzoom);
-
 
 d3.json("map/map.topojson", function (world) {
     console.log(world)
@@ -161,7 +157,7 @@ d3.json("map/map.topojson", function (world) {
 
     projection.rotate([rot[0], rot[1], 0])
     switchProjection(projId);
-    svg.call(zoom.transform, d3.zoomIdentity.scale(k))
+    onzoom(k)
     setZoomSlider(k);
     document.querySelector("#proj-select").value = projId;
     translateUI(locale);
@@ -297,12 +293,61 @@ function draw() {
     arrangeLabels();
 }
 
+let evCache = [];
+let prevDiff = -1;
+svg.node().addEventListener("pointerdown", function(ev) {
+    evCache.push(ev);
+})
+svg.node().addEventListener("pointermove", function(ev) {
+    const index = evCache.findIndex(
+        (cachedEv) => cachedEv.pointerId === ev.pointerId,
+    );
+    evCache[index] = ev;
+    if (evCache.length === 2) {
+    // Calculate the distance between the two pointers
+        const curDiff = Math.hypot(
+            evCache[0].clientX - evCache[1].clientX,
+            evCache[0].clientY - evCache[1].clientY,
+        );
 
-svg.call(zoom);
-svg.call(zoom.transform, d3.zoomIdentity.scale(INIT_K))
-function onzoom() {
-    var s = projection.scale() * d3.event.transform.k / lastZoomK;
-    lastZoomK = d3.event.transform.k;
+        if (prevDiff > 0) {
+            onzoom(curDiff / prevDiff)
+        }
+
+        // Cache the distance for the next move event
+        prevDiff = curDiff;
+    }
+})
+svg.node().addEventListener("pointerup", function(ev) {
+  // Remove this event from the target's cache
+  const index = evCache.findIndex(
+    (cachedEv) => cachedEv.pointerId === ev.pointerId,
+  );
+  prevDiff = -1;
+  evCache.splice(index, 1);
+})
+
+svg.node().addEventListener("wheel", function(ev) {
+    if (ev.deltaY < 0) {
+        // lastDeltaY = ev.deltaY;
+        // return;
+        onzoom(1.1891)
+    } else {
+        onzoom(0.8367)
+    }
+})
+function onzoom(scale) {
+    var s = -1, k;
+    s = projection.scale() * scale;
+    k = lastZoomK * scale;
+    if (k > MAX_K) {
+        k = MAX_K;
+        s = projection.scale() * k / lastZoomK;
+    } else if (k < MIN_K) {
+        k = MIN_K;
+        s = projection.scale() * k / lastZoomK;
+    }
+    lastZoomK = k;
     projection.scale(s);
 
     // Do not apply d3.zoom's mouse-relative transform — redraw centered via projection

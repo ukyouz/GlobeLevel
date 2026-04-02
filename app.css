@@ -144,7 +144,6 @@ svg path[id] {
     align-items: center;
     justify-content: space-between;
     position: relative;
-    white-space: nowrap;
 }
 
 [lang="en"] .form .title {

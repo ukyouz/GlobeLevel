@@ -532,7 +532,9 @@ var levelBtns = popup.selectAll(".level-btn")
 function showPopup(id, clientX, clientY) {
     activeAreaId = id;
     activeGeoCentroid = clientToGeo(clientX, clientY);
-    popup.select(".place-name").text(UI.area(id));
+    popup.select(".place-name")
+        .attr("i18n", id)
+        .text(UI.area(id));
     popup.style("display", "block")
         .style("left", clientX + "px")
         .style("top", clientY + "px");
@@ -571,7 +573,12 @@ function setCountryLevel(id, level) {
 }
 document.addEventListener("click", function(e) {
     // console.log(e.target)
-    if (!e.target.classList.contains("close") && e.target.closest("#form")) {
+    if (e.target.closest("#form")) {
+        if (!e.target.classList.contains("close")) {
+            return;
+        }
+    }
+    if (e.target.closest(".bottom-right")) {
         return;
     }
     hidePopup();
@@ -757,32 +764,35 @@ function translateUI(lang = "en") {
         lang_selector.value = lang;
         document.querySelectorAll("[i18n]").forEach(function (elem) {
             const key = elem.attributes.i18n.value;
-
             if (elem.classList.contains("place")) {
                 const text = UI.area(key);
-                const longText = text.length > 15 && text.indexOf(" ") > 0;
-                const d3Node = d3.select(elem);
-                if (!longText) {
-                    d3Node.text(text);
-                } else {
-                    let half_pos = text.length / 2;
-                    let last_space_pos = -1;
-                    for (let i = 0; i < text.length; ++i) {
-                        if (text[i] == " ") {
-                            if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
-                                last_space_pos = i;
+                if (elem.tagName == "text") {
+                    const longText = text.length > 15 && text.indexOf(" ") > 0;
+                    const d3Node = d3.select(elem);
+                    if (!longText) {
+                        d3Node.text(text);
+                    } else {
+                        let half_pos = text.length / 2;
+                        let last_space_pos = -1;
+                        for (let i = 0; i < text.length; ++i) {
+                            if (text[i] == " ") {
+                                if (Math.abs(half_pos - i) < Math.abs(half_pos - last_space_pos)) {
+                                    last_space_pos = i;
+                                }
                             }
                         }
+                        elem.innerHTML = "";
+                        d3Node.append("tspan")
+                            .attr("x", d3Node.attr("x"))
+                            .attr("dy", "0")
+                            .text(text.slice(0, last_space_pos));
+                        d3Node.append("tspan")
+                            .attr("x", d3Node.attr("x"))
+                            .attr("dy", "1em")
+                            .text(text.slice(last_space_pos + 1));
                     }
-                    elem.innerHTML = "";
-                    d3Node.append("tspan")
-                        .attr("x", d3Node.attr("x"))
-                        .attr("dy", "0")
-                        .text(text.slice(0, last_space_pos));
-                    d3Node.append("tspan")
-                        .attr("x", d3Node.attr("x"))
-                        .attr("dy", "1em")
-                        .text(text.slice(last_space_pos + 1));
+                } else {
+                    elem.innerHTML = text;
                 }
             } else {
                 elem.innerHTML = fmt(UI._(key));

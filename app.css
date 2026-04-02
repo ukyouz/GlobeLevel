@@ -89,9 +89,6 @@ svg {
     /*min-width: 320px;*/
     /*min-height: 320px;*/
     user-select: none;
-
-    touch-action: none;
-    -ms-touch-action: none;
 }
 
 svg text {
@@ -176,7 +173,6 @@ svg path[id] {
     padding: 0.5em;
     display: none;
 }
-
 .form.has-external label[for=externLinks] {
     margin-right: 2px;
     color: #3f81ec;
@@ -202,8 +198,7 @@ svg path[id] {
 .form input#externLinks {
     display: none;
 }
-
-.form.has-external input#externLinks:checked+.links {
+.form.has-external input#externLinks:checked + .links {
     display: block;
 }
 
@@ -245,7 +240,6 @@ svg path[id] {
     transition: background 0.2s;
     border-bottom: 1px solid #efefef;
 }
-
 .form .label:last-child {
     border-bottom: none;
 }
@@ -318,58 +312,6 @@ svg path[id][levelcolor=blue]:hover {
     right: 1em;
     text-align: right;
     user-select: none;
-}
-
-.right {
-    position: absolute;
-    top: 3em;
-    right: 1em;
-    bottom: 10em;
-}
-
-.inputs.right {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.options .line {
-    padding: 0 10px;
-    position: relative;
-    height: 180px;
-    margin: 10px 0;
-}
-
-.options .line .axis {
-    width: 1px;
-    height: 180px;
-    background: #aaa;
-    left: 50%;
-    position: absolute;
-}
-
-.options .line .mid {
-    width: 6px;
-    height: 3px;
-    background: #aaa;
-    bottom: 10px;
-    margin-top: -1px;
-    left: 50%;
-    position: absolute;
-}
-
-.options .ball {
-    width: 25px;
-    height: 15px;
-    left: 50%;
-    margin-top: -7px;
-    margin-left: -12px;
-    border-radius: 12px;
-    border: 1px solid #aaa;
-    box-shadow: 0.5px 2px 1px #ccc;
-    background: #fafafa;
-    position: absolute;
-    cursor: -webkit-grab;
 }
 
 .inputs input[type=text],

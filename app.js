@@ -69,11 +69,11 @@ const INIT_SCALE = 160;
 const INIT_K = 2.5, MIN_K = 1, MAX_K = 49;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
-    d3.geoOrthographic().clipAngle(90).precision(0.5),
-    d3.geoNaturalEarth1().precision(0.5),
-    d3.geoEquirectangular().precision(0.5),
-    d3.geoMercator().precision(0.5),
-    d3.geoAzimuthalEqualArea().precision(0.5),
+    d3.geoOrthographic().clipAngle(90).precision(0.4),
+    d3.geoNaturalEarth1().precision(0.4),
+    d3.geoEquirectangular().precision(0.4),
+    d3.geoMercator().precision(0.4),
+    d3.geoAzimuthalEqualArea().precision(0.4),
 ];
 var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
@@ -154,7 +154,7 @@ d3.json("map/map.topojson", function (world) {
     addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
 
     params = parseQuery(window.location.search);
-    addShadowLabel(group, [40, height - 40], 32, params.t || "");
+    addShadowLabel(group, [32, height - 40], 32, params.t || "");
 
     projection.rotate([rot[0], rot[1], 0])
     switchProjection(projId);
@@ -166,7 +166,7 @@ d3.json("map/map.topojson", function (world) {
 });
 
 function addTitleLabel(d3Node, lvl) {
-    let {fg, bg} = addShadowLabel(d3Node, [40, 100], 42, UI._("globe-level") + " " + lvl);
+    let {fg, bg} = addShadowLabel(d3Node, [32, 100], 42, UI._("globe-level") + " " + lvl);
     fg.attr("font-weight", 800)
     bg.attr("font-weight", 800)
 }
@@ -570,7 +570,7 @@ function setCountryLevel(id, level) {
     updateTitle();
 }
 document.addEventListener("click", function(e) {
-    console.log(e.target)
+    // console.log(e.target)
     if (!e.target.classList.contains("close") && e.target.closest("#form")) {
         return;
     }
@@ -863,7 +863,7 @@ function lineClick(e){
         top = sliderHeight*top_init;
 
     slider.style.top = top+"px";
-    console.log(top)
+    // console.log(top)
     zoomSliderChanged(top);
 }
 if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ){

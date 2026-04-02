@@ -140,7 +140,7 @@ d3.json("map/map.topojson", function (world) {
         .append("g").each(function (d) {
             UI.setArea(d.id, d.id);
 
-            const center = getLabelCentroid(d);
+            const center = cachedLabelCentroid(d, true);
             var { fg, bg } = addShadowLabel(d3.select(this), center, INIT_FONTSIZE, d.id);
             initRegionLabel(bg, d.id);
             initRegionLabel(fg, d.id);
@@ -149,6 +149,7 @@ d3.json("map/map.topojson", function (world) {
                 .attr("stroke-width", "2")
             fg.attr("class", "place place-label")
         })
+    updateLabelBBox();
 
     addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
 
@@ -282,7 +283,7 @@ function draw() {
     projection.rotate([r[0], r[1], 0])
     svg.selectAll("path").attr("d", path);
     svg.selectAll("text.place").each(function (d) {
-        var c = getLabelCentroid(d);
+        var c = cachedLabelCentroid(d, true);
         d3.select(this)
             .attr("x", isNaN(c[0]) ? 0 : c[0])
             .attr("y", isNaN(c[1]) ? 0 : c[1])
@@ -358,11 +359,23 @@ function onzoom(scale) {
     var relScale = projection.scale() / INIT_SCALE;
     svg.selectAll("text.place")
         .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
+    updateLabelBBox();
     arrangeLabels();
     arrangePopup();
     setZoomSlider(lastZoomK);
 }
 
+function updateLabelBBox() {
+    svg.selectAll("text.place-outline").each(function(d){
+        var b = this.getBBox();
+        if (b.width <= 0 || b.height <= 0) {
+            return;
+        }
+        d3.select(this)
+            .attr("data-width", b.width + 5)
+            .attr("data-height", b.height + 5)
+    })
+}
 
 function arrangeLabels() {
     // Reset all to visible first — getBBox() throws on display:none elements in Chrome
@@ -373,12 +386,17 @@ function arrangeLabels() {
     var shown = [];
     svg.selectAll("text.place-outline")
         .each(function (d) {
-            const geo = getLabelCentroid(d);
+            const geo = cachedLabelCentroid(d);
             var isShown = true;
             if (d3.select(this).attr("disabled") == "true") isShown = false;
             if (isNaN(geo[0])) isShown = false;
 
-            var b = this.getBBox();
+            var b = {
+                width: parseInt(this.dataset.width),
+                height: parseInt(this.dataset.height),
+            };
+            b.x = geo[0] - b.width / 2;
+            b.y = geo[1] - b.height / 2;
             for (var i = 0; i < shown.length; i++) {
                 var s = shown[i];
                 if (b.x < s.x + s.width && b.x + b.width > s.x &&
@@ -441,6 +459,16 @@ function getLabelCentroid(d) {
     }
     var geo = d3.geoCentroid(feature);       // geographic [lon, lat] — projection-independent
     return projection(geo) || [NaN, NaN];    // null when clipped (back hemisphere)
+}
+
+let centroidCache = {};
+function cachedLabelCentroid(d, update=false) {
+    if (centroidCache[d.id] && !update) {
+        return centroidCache[d.id];
+    }
+    let out = getLabelCentroid(d);
+    centroidCache[d.id] = out;
+    return out;
 }
 
 function switchProjection(index) {
@@ -760,6 +788,7 @@ function translateUI(lang = "en") {
                 elem.innerHTML = fmt(UI._(key));
             }
         })
+        updateLabelBBox();
         arrangeLabels();
     }
     updateHash();

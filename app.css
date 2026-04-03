@@ -103,6 +103,10 @@ svg text {
     transition: color .3s;
 }
 
+svg text.place {
+    font-family: Calibri, "HG丸ｺﾞｼｯｸM-PRO", "ヒラギノ丸ゴ ProN", ui-rounded, sans-serif;
+}
+
 svg text.place-label:hover {
     stroke: var(--link-hover-color);
 }

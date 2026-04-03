@@ -65,8 +65,8 @@ class Lang {
 let UI = new Lang("en");
 let links = {};
 
-const INIT_SCALE = 160;
-const INIT_K = 2.5, MIN_K = 1, MAX_K = 49;
+const INIT_SCALE = 50;
+const INIT_K = 8, MIN_K = 1, MAX_K = 159;
 const INIT_FONTSIZE = 13;
 const PROJECTIONS = [
     d3.geoOrthographic().clipAngle(90).precision(0.4),
@@ -108,7 +108,7 @@ d3.json("map/map.topojson", function (world) {
     var countries = topojson.feature(world, world.objects.collection);
 
     // Areas
-    var nodes = group.append("g").selectAll("g").data(countries.features).enter()
+    var nodes = group.append("g").attr("class", "areas").selectAll("g").data(countries.features).enter()
         .each(function (d, index) {
             d3.select(this)
                 .append("g")
@@ -132,7 +132,7 @@ d3.json("map/map.topojson", function (world) {
     var sortedFeatures = countries.features.slice().sort(function (a, b) {
         return d3.geoArea(b) - d3.geoArea(a);
     });
-    nodes = group.append("g").selectAll("g").data(sortedFeatures).enter()
+    nodes = group.append("g").attr("class", "labels").selectAll("g").data(sortedFeatures).enter()
         .append("g").each(function (d) {
             UI.setArea(d.id, d.id);
 
@@ -149,7 +149,7 @@ d3.json("map/map.topojson", function (world) {
     addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
 
     params = parseQuery(window.location.search);
-    addShadowLabel(group, [32, height - 40], 32, params.t || "");
+    addShadowLabel(group, [16, height - 32], 32, params.t || "");
 
     projection.rotate([rot[0], rot[1], 0])
     switchProjection(projId);
@@ -161,8 +161,12 @@ d3.json("map/map.topojson", function (world) {
     arrangeLabels();
 });
 
+const TITLE_FONTSZ = 42;
 function addTitleLabel(d3Node, lvl) {
-    let {fg, bg} = addShadowLabel(d3Node, [32, 100], 42, UI._("globe-level") + " " + lvl);
+    let homeLinks = document.querySelector(".nav-group")
+    let bbox = homeLinks.getBoundingClientRect();
+    let top = bbox.bottom + bbox.top + TITLE_FONTSZ;
+    let {fg, bg} = addShadowLabel(d3Node, [16, top], TITLE_FONTSZ, UI._("globe-level") + " " + lvl);
     fg.attr("font-weight", 800)
     bg.attr("font-weight", 800)
 }
@@ -378,7 +382,7 @@ function onzoom(scale) {
     // Scale font size inversely with projection scale so labels stay readable
     var relScale = projection.scale() / INIT_SCALE;
     svg.selectAll("text.place")
-    .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
+    .style("font-size", Math.max(11, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
 }
 
 function updateLabelBBox() {
@@ -584,6 +588,19 @@ document.addEventListener("click", function(e) {
     hidePopup();
 });
 
+let cb = null;
+function reloadPage() {
+    return setTimeout(function() {
+        window.location.reload()
+    }, 500);
+}
+window.addEventListener("resize", function(ev) {
+    if (cb) {
+        clearTimeout(cb)
+    }
+    cb = reloadPage()
+})
+
 function updateTitle() {
     const hashs = readHash();
     const title = document.querySelector("#level");
@@ -732,9 +749,8 @@ function toDataURL(width, height) {
 
 function saveAsImage(elem) {
     const svg = document.querySelector("svg");
-    const bbox = svg.getBBox();
     const dpi = window.devicePixelRatio;
-    var png = toDataURL(bbox.width * dpi, bbox.height * dpi);
+    var png = toDataURL(width * dpi, height * dpi);
     elem.setAttribute('href', png);
     // window.open(png, 'japanex.png');
 };

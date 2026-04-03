@@ -121,11 +121,7 @@ d3.json("map/map.topojson", function (world) {
                 .attr("stroke", "black")
                 .attr("stroke-linejoin", "round")
                 .attr("fill", "#fff")
-                .on("click", function (d) {
-                    if (d3.event.defaultPrevented) return;
-                    d3.event.stopPropagation();
-                    showPopup(d.id, d3.event.pageX, d3.event.pageY);
-                })
+                .on("click", function (d) { onRegionClicked(d.id) })
                 .on("dblclick", function () { d3.event.stopPropagation() })
             if (lvl[index]) {
                 setCountryLevel(d.id, lvl[index]);
@@ -161,8 +157,8 @@ d3.json("map/map.topojson", function (world) {
     document.querySelector("#proj-select").value = projId;
     translateUI(locale);
     updateLabelBBox();
-    arrangeLabels();
     draw();
+    arrangeLabels();
 });
 
 function addTitleLabel(d3Node, lvl) {
@@ -191,12 +187,14 @@ function initRegionLabel(d3Node, text) {
     d3Node
         .attr("text-anchor", "middle")
         .attr("i18n", text)
-        .on("click", function (d) {
-            if (d3.event.defaultPrevented) return;
-            d3.event.stopPropagation();
-            showPopup(text, d3.event.pageX, d3.event.pageY);
-        })
+        .on("click", function (d) { onRegionClicked(text) })
         .on("dblclick", function () { d3.event.stopPropagation() })
+}
+
+function onRegionClicked(id) {
+    if (d3.event.defaultPrevented) return;
+    d3.event.stopPropagation();
+    showPopup(id, d3.event.pageX, d3.event.pageY);
 }
 
 var timerId = null, cancelInertial = false;
@@ -227,6 +225,7 @@ var inertia = d3.inertiaHelper({
         projection.rotate([r1[0], r1[1], 0])
 
         draw();
+        updateLabelBBox();
         arrangeLabels();
         arrangePopup();
 
@@ -279,8 +278,6 @@ svg.call(d3.drag()
 
 
 function draw() {
-    let r = projection.rotate();
-    projection.rotate([r[0], r[1], 0])
     svg.selectAll("path").attr("d", path);
     svg.selectAll("text.place").each(function (d) {
         var c = cachedLabelCentroid(d, true);
@@ -290,8 +287,6 @@ function draw() {
             .selectAll("tspan")
             .attr("x", isNaN(c[0]) ? 0 : c[0])
     })
-
-    arrangeLabels();
 }
 
 let evCache = [];
@@ -313,8 +308,8 @@ svg.node().addEventListener("pointermove", function(ev) {
 
         if (prevDiff > 0) {
             onzoom(curDiff / prevDiff)
-            draw();
             updateLabelBBox();
+            draw();
             arrangeLabels();
             arrangePopup();
         }
@@ -363,8 +358,8 @@ window.addEventListener("wheel", function(ev) {
     let r1 = versor.rotation(q1);
     projection.rotate([r1[0], r1[1], 0])
 
-    draw();
     updateLabelBBox();
+    draw();
     arrangeLabels();
     arrangePopup();
     updateHash();
@@ -388,20 +383,20 @@ function onzoom(scale) {
 
 function updateLabelBBox() {
     svg.selectAll("text.place-outline").each(function(d){
-        var b = this.getBBox();
+        var b = this.getBoundingClientRect();
         if (b.width <= 0 || b.height <= 0) {
             return;
         }
         d3.select(this)
-            .attr("data-width", b.width + 5)
-            .attr("data-height", b.height + 5)
+            .attr("data-width", b.width + 4)
+            .attr("data-height", b.height + 4)
     })
 }
 
 function arrangeLabels() {
     // Reset all to visible first — getBBox() throws on display:none elements in Chrome
     svg.selectAll("text.place")
-        .attr("shown", "false")
+        .attr("shown", "true")
         .style("display", null);
 
     var shown = [];
@@ -512,27 +507,11 @@ function switchProjection(index) {
 var activeAreaId = null;
 var activeGeoCentroid = null; // geographic centroid of the active area, stable across zoom
 
-function svgToClient(svgX, svgY) {
-    var pt = svg.node().createSVGPoint();
-    pt.x = svgX;
-    pt.y = svgY;
-    var screen = pt.matrixTransform(svg.node().getScreenCTM());
-    return { x: screen.x, y: screen.y };
-}
-
-function clientToGeo(clientX, clientY) {
-    var pt = svg.node().createSVGPoint();
-    pt.x = clientX;
-    pt.y = clientY;
-    var svgPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
-    return projection.invert([svgPt.x, svgPt.y]);
-}
-
 function arrangePopup() {
     if (!activeGeoCentroid || popup.style("display") === "none") return;
     var projected = projection(activeGeoCentroid);
     if (!projected) return; // country rotated to back hemisphere
-    var client = svgToClient(projected[0], projected[1]);
+    var client = {x: projected[0], y: projected[1]};
     popup.style("left", client.x + "px")
         .style("top", client.y + "px");
 }
@@ -552,7 +531,7 @@ var levelBtns = popup.selectAll(".level-btn")
 
 function showPopup(id, clientX, clientY) {
     activeAreaId = id;
-    activeGeoCentroid = clientToGeo(clientX, clientY);
+    activeGeoCentroid = projection.invert([clientX, clientY]);
     popup.select(".place-name")
         .attr("i18n", id)
         .text(UI.area(id));

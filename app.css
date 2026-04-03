@@ -1,3 +1,10 @@
+:root {
+    --link-hover-color: #3e6ffe;
+    --button-border-color: #aaa;
+    --card-title-background-color: #efefef;
+    --svg-hover-background-color: #eaeaea;
+}
+
 html,
 body {
     margin: 0;
@@ -17,7 +24,6 @@ body {
     /*border: 1.5px solid #354255;*/
     /*border-radius: 4px;*/
     /*transition: border-color .2s;*/
-    font-family: 'Ubuntu Condensed', sans-serif;
     background: #fff;
     border: 2px solid black;
     border-radius: 3px;
@@ -98,7 +104,7 @@ svg text {
 }
 
 svg text.place-label:hover {
-    stroke: #3e6ffe;
+    stroke: var(--link-hover-color);
 }
 
 svg path {
@@ -120,7 +126,7 @@ svg path[id] {
 
 .form {
     background: #fff;
-    border: 1px solid #aaa;
+    border: 1px solid var(--button-border-color);
     border-radius: 12px;
     max-width: 300px;
     position: fixed;
@@ -139,7 +145,7 @@ svg path[id] {
 
 .form .title {
     display: flex;
-    background: #efefef;
+    background: var(--card-title-background-color);
     padding: 0.25em 0.5em 0.25em 0.5em;
     line-height: 1;
     align-items: center;
@@ -164,7 +170,7 @@ svg path[id] {
     /* bottom: 0.5em; */
     /* overflow-y: scroll; */
     background: white;
-    border: 1px solid #aaa;
+    border: 1px solid var(--button-border-color);
     border-radius: 6px;
     box-shadow: 2px 4px 6px #c0c0c0;
     display: flex;
@@ -191,7 +197,7 @@ svg path[id] {
     background: #fff;
     top: -4px;
     left: 0.65em;
-    border: 0px solid #aaa;
+    border: 0px solid var(--button-border-color);
     border-width: 1px 0 0 1px;
 }
 
@@ -224,7 +230,7 @@ svg path[id] {
 }
 
 .form .title .icon-group .icon.search:hover {
-    color: #3e6ffe;
+    color: var(--link-hover-color);
 }
 
 .form .title .icon-group .icon.close:hover {
@@ -238,7 +244,7 @@ svg path[id] {
     display: block;
     -webkit-transition: background 0.2s;
     transition: background 0.2s;
-    border-bottom: 1px solid #efefef;
+    border-bottom: 1px solid var(--card-title-background-color);
 }
 .form .label:last-child {
     border-bottom: none;
@@ -246,11 +252,11 @@ svg path[id] {
 
 .form .label:hover,
 .form .label.selected {
-    background: #eaeaea;
+    background: var(--svg-hover-background-color);
 }
 
 svg path[id]:hover {
-    fill: #eaeaea;
+    fill: var(--svg-hover-background-color);
 }
 
 .form .label.red:hover,
@@ -317,7 +323,7 @@ svg path[id][levelcolor=blue]:hover {
 .inputs input[type=text],
 .inputs .btn {
     background: #fff;
-    border: 1px solid #aaa;
+    border: 1px solid var(--button-border-color);
     border-radius: 12px;
     padding: 0px 10px;
     margin: 6px 0 0;

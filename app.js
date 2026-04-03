@@ -159,6 +159,7 @@ d3.json("map/map.topojson", function (world) {
     updateLabelBBox();
     draw();
     arrangeLabels();
+    addLevelsLegend();
 });
 
 const TITLE_FONTSZ = 42;
@@ -199,6 +200,46 @@ function onRegionClicked(id) {
     if (d3.event.defaultPrevented) return;
     d3.event.stopPropagation();
     showPopup(id, d3.event.pageX, d3.event.pageY);
+}
+
+function addLevelsLegend() {
+    const LINE_HEIGHT = 26;
+    const PADDING = 10;
+    let titleBox = document.querySelector("#level");
+    let bbox = titleBox.getBoundingClientRect();
+    let g = group.append("g").selectAll("g")
+        .data(levelColorNames).enter();
+    g.append("rect")
+        .attr("x", 16)
+        .attr("y", bbox.bottom + 11)
+        .attr("width", 180)
+        .attr("height", levelColorNames.length * LINE_HEIGHT + PADDING)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .attr("fill", "white")
+        .attr("rx", 4)
+    g.append("rect")
+        .attr("x", 16 + PADDING)
+        .attr("y", (d, i) => i * LINE_HEIGHT + bbox.bottom + 11 + PADDING)
+        .attr("width", 27)
+        .attr("height", 18)
+        .attr("stroke", "#eaeaea")
+        .attr("stroke-width", (d, i) => i == 0 ? 1 : 0)
+        .attr("rx", 3)
+        .attr("fill", (d, i) => levelColors[i])
+    g.append("text")
+        .attr("x", 25 + PADDING)
+        .attr("y", (d, i) => (i + 1) * LINE_HEIGHT + bbox.bottom - 1 + PADDING)
+        .attr("font-size", 14)
+        .attr("font-weight", 600)
+        .attr("fill", (d, i) => i == 0 ? "#00000080": "#ffffff80")
+        .text((d, i) => i)
+    g.append("text")
+        .attr("x", 51 + PADDING)
+        .attr("y", (d, i) => (i + 1) * LINE_HEIGHT + bbox.bottom - 1 + PADDING)
+        .attr("i18n", (d, i) => `level${i}`)
+        .attr("font-size", 13)
+        .text((d) => d)
 }
 
 var timerId = null, cancelInertial = false;

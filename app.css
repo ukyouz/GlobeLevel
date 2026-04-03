@@ -201,11 +201,18 @@ svg path[id] {
     border-width: 1px 0 0 1px;
 }
 
-.form input#externLinks {
+input.hidden-box {
     display: none;
 }
-.form.has-external input#externLinks:checked + .links {
+input.hidden-box + div {
+    display: none;
+}
+.inputs input.hidden-box:checked + div,
+.form.has-external input.hidden-box:checked + div {
     display: block;
+}
+.inputs input.hidden-box:checked ~ label[for] {
+    color: var(--link-hover-color);
 }
 
 .form .links a {

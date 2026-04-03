@@ -78,7 +78,7 @@ const PROJECTIONS = [
 var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
-var lastZoomK = INIT_K;
+var lastZoomK = MIN_K;
 
 d3.json("map/map.topojson", function (world) {
     console.log(world)
@@ -149,7 +149,6 @@ d3.json("map/map.topojson", function (world) {
                 .attr("stroke-width", "2")
             fg.attr("class", "place place-label")
         })
-    updateLabelBBox();
 
     addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
 
@@ -161,7 +160,9 @@ d3.json("map/map.topojson", function (world) {
     onzoom(k)
     document.querySelector("#proj-select").value = projId;
     translateUI(locale);
+    updateLabelBBox();
     arrangeLabels();
+    draw();
 });
 
 function addTitleLabel(d3Node, lvl) {
@@ -207,6 +208,7 @@ var v0, // Mouse position in Cartesian coordinates at start of drag gesture.
     q10; // Projection rotation as versor at end.
 var inertia = d3.inertiaHelper({
     start: function () {
+        // console.log(inertia.position)
         v0 = versor.cartesian(projection.invert(inertia.position));
         r0 = projection.rotate();
         q0 = versor(r0);
@@ -265,9 +267,6 @@ var inertia = d3.inertiaHelper({
     },
     time: 1700,
 });
-
-
-
 svg.call(d3.drag()
     .filter(() => {
         if (d3.event.touches?.length == 2) return false;  // 2+ fingers = zoom, not drag
@@ -314,6 +313,10 @@ svg.node().addEventListener("pointermove", function(ev) {
 
         if (prevDiff > 0) {
             onzoom(curDiff / prevDiff)
+            draw();
+            updateLabelBBox();
+            arrangeLabels();
+            arrangePopup();
         }
 
         // Cache the distance for the next move event
@@ -327,42 +330,60 @@ svg.node().addEventListener("pointerup", function(ev) {
   );
   prevDiff = -1;
   evCache.splice(index, 1);
+  updateHash();
 })
+function clamp(val, min, max) {
+    return Math.min(max, Math.max(min, val));
+}
+let baseDeltaY = 0;
+window.addEventListener("wheel", function(ev) {
+    if (ev.ctrlKey) {
+        ev.preventDefault();
+    }
 
-svg.node().addEventListener("wheel", function(ev) {
+    let absDeltaY = Math.abs(ev.deltaY);
+    if (baseDeltaY == 0 || absDeltaY < baseDeltaY) {
+        if (absDeltaY >= 100) {
+            baseDeltaY = absDeltaY / 25;
+        } else {
+            baseDeltaY = clamp(baseDeltaY, 1, Math.max(absDeltaY, 1));
+        }
+    }
+
+    // also rotate to cursor position
+    let v0 = versor.cartesian(projection.invert([ev.clientX, ev.clientY]));
+    let q0 = versor(projection.rotate());
     if (ev.deltaY < 0) {
-        // lastDeltaY = ev.deltaY;
-        // return;
-        onzoom(1.1891)
-    } else {
-        onzoom(0.8367)
+        onzoom(clamp(Math.pow(2, -ev.deltaY / baseDeltaY / 128), 1, 2))
+    } else if (ev.deltaY > 0) {
+        onzoom(clamp(Math.pow(0.5, ev.deltaY / baseDeltaY / 128), 0.5, 1))
     }
-})
+    let v1 = versor.cartesian(projection.invert([ev.clientX, ev.clientY]));
+    let q1 = versor.multiply(q0, versor.delta(v0, v1))
+    let r1 = versor.rotation(q1);
+    projection.rotate([r1[0], r1[1], 0])
+
+    draw();
+    updateLabelBBox();
+    arrangeLabels();
+    arrangePopup();
+    updateHash();
+
+}, {"passive": false})
+
 function onzoom(scale) {
-    var s = -1, k;
-    s = projection.scale() * scale;
-    k = lastZoomK * scale;
-    if (k > MAX_K) {
-        k = MAX_K;
-        s = projection.scale() * k / lastZoomK;
-    } else if (k < MIN_K) {
-        k = MIN_K;
-        s = projection.scale() * k / lastZoomK;
-    }
+    let k = clamp(lastZoomK * scale, MIN_K, MAX_K);
+    var s = INIT_SCALE * k;
     lastZoomK = k;
     projection.scale(s);
 
     // Do not apply d3.zoom's mouse-relative transform — redraw centered via projection
     group.attr("transform", null);
-    draw();
 
     // Scale font size inversely with projection scale so labels stay readable
     var relScale = projection.scale() / INIT_SCALE;
     svg.selectAll("text.place")
-        .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
-    updateLabelBBox();
-    arrangeLabels();
-    arrangePopup();
+    .style("font-size", Math.max(4, INIT_FONTSIZE / Math.pow(relScale, 0.05)) + "px");
 }
 
 function updateLabelBBox() {
@@ -800,9 +821,9 @@ function translateUI(lang = "en") {
         })
         updateLabelBBox();
         arrangeLabels();
+        updateTitle();
+        updateHash();
     }
-    updateHash();
-    updateTitle();
 }
 
 loadData("map/links.json", function(data) {

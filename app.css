@@ -6,6 +6,7 @@ body {
     overflow: hidden;
     height: 100%;
     font-family: sans-serif;
+    touch-action: pan-x pan-y; /* Allows scrolling but disables pinch-zoom */
 }
 
 .nav-group {

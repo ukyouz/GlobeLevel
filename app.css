@@ -156,6 +156,13 @@ svg path[id] {
     justify-content: space-between;
     position: relative;
 }
+.form.rtl .title > span {
+    direction: rtl;
+    flex-grow: 1;
+}
+.form.rtl .title > span label {
+    margin-left: 6px;
+}
 
 [lang="en"] .form .title {
     padding-right: 70px;
@@ -225,7 +232,7 @@ input.hidden-box + div {
 }
 
 .form .title .icon-group {
-    margin-left: 12px;
+    margin-left: 6px;
     white-space: nowrap;
     display: inherit;
 }

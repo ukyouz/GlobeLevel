@@ -13,6 +13,32 @@ const CHAR2LVLS = (function () {
     }
     return levels
 })();
+const RTL_REGIONS = [
+    "Bahrain",
+    "Chad",
+    "Comoros",
+    "Djibouti",
+    "Egypt",
+    "Eritrea",
+    "Iran",
+    "Iraq",
+    "Jordan",
+    "Kuwait",
+    "Lebanon",
+    "Libya",
+    "Mauritania",
+    "Morocco",
+    "Oman",
+    "Pakistan",
+    "Qatar",
+    "Saudi Arabia",
+    "Somalia",
+    "Sudan",
+    "Syria",
+    "Tunisia",
+    "United Arab Emirates",
+    "Yemen",
+]
 const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
 const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
 let LANGS = {
@@ -594,6 +620,13 @@ function showPopup(id, clientX, clientY) {
     popup.select(".search")
         .attr("href", 'https://google.com/search?q=' + id)
         .attr("title", 'Search: ' + id)
+    let nativeName = UI.area(id);
+    let isAscii = (str) => /^[\x00-\x7F]+$/.test(str);
+    if (lang_selector.value == "native" && RTL_REGIONS.indexOf(id) >= 0 && !isAscii(nativeName)) {
+        popup.node().classList.add("rtl")
+    } else {
+        popup.node().classList.remove("rtl")
+    }
     if (links[id]) {
         popup.node().classList.add("has-external")
         let d3Links = popup.select(".links")

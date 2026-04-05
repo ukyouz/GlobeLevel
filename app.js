@@ -58,6 +58,9 @@ let LANGS = {
         "show-graticule": "Graticules",
         "confirm-clear-levels": "Are you sure to clear all level colors?",
         "ask-for-name": "Please enter the name you want to show:",
+        "legend.small": "Small Legend",
+        "legend.big": "Big Legend",
+        "legend.none": "No Legend",
         "projection.orthographic": "3D Globe",
         "projection.natural-earth": "Natural Earth",
         "projection.equirectangular": "Equirectangular",
@@ -185,7 +188,7 @@ d3.json("map/map.topojson", function (world) {
     updateLabelBBox();
     draw();
     arrangeLabels();
-    addLevelsLegend();
+    addSmallLevelsLegend();
 });
 
 const TITLE_FONTSZ = 42;
@@ -228,12 +231,46 @@ function onRegionClicked(id) {
     showPopup(id, d3.event.pageX, d3.event.pageY);
 }
 
-function addLevelsLegend() {
+function addSmallLevelsLegend() {
     const LINE_HEIGHT = 26;
     const PADDING = 10;
     let titleBox = document.querySelector("#level");
     let bbox = titleBox.getBoundingClientRect();
-    let g = group.append("g").selectAll("g")
+    let g = group.append("g").attr("id", "legend").selectAll("g")
+        .data(levelColorNames).enter();
+    g.append("rect")
+        .attr("x", 16)
+        .attr("y", bbox.bottom + 11)
+        .attr("width", (LINE_HEIGHT + PADDING) * levelColorNames.length + PADDING + 2)
+        .attr("height", LINE_HEIGHT + PADDING)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .attr("fill", "white")
+        .attr("rx", 6)
+    g.append("rect")
+        .attr("x", (d, i) => 16 + PADDING + i * (LINE_HEIGHT + PADDING))
+        .attr("y", bbox.bottom + 10 + PADDING)
+        .attr("width", LINE_HEIGHT + 1)
+        .attr("height", 18)
+        .attr("stroke", "#eaeaea")
+        .attr("stroke-width", (d, i) => i == 0 ? 1 : 0)
+        .attr("rx", 3)
+        .attr("fill", (d, i) => levelColors[i])
+    g.append("text")
+        .attr("x", (d, i) => 16 + PADDING + i * (LINE_HEIGHT + PADDING) + 9)
+        .attr("y", bbox.bottom + 10 + PADDING + 14)
+        .attr("font-size", 14)
+        .attr("font-weight", 600)
+        .attr("fill", (d, i) => i == 0 ? "#000000b0": "#ffffffb0")
+        .text((d, i) => i)
+}
+
+function addBigLevelsLegend() {
+    const LINE_HEIGHT = 26;
+    const PADDING = 10;
+    let titleBox = document.querySelector("#level");
+    let bbox = titleBox.getBoundingClientRect();
+    let g = group.append("g").attr("id", "legend").selectAll("g")
         .data(levelColorNames).enter();
     g.append("rect")
         .attr("x", 16)
@@ -247,7 +284,7 @@ function addLevelsLegend() {
     g.append("rect")
         .attr("x", 16 + PADDING)
         .attr("y", (d, i) => i * LINE_HEIGHT + bbox.bottom + 11 + PADDING)
-        .attr("width", 27)
+        .attr("width", LINE_HEIGHT + 1)
         .attr("height", 18)
         .attr("stroke", "#eaeaea")
         .attr("stroke-width", (d, i) => i == 0 ? 1 : 0)
@@ -258,14 +295,27 @@ function addLevelsLegend() {
         .attr("y", (d, i) => (i + 1) * LINE_HEIGHT + bbox.bottom - 1 + PADDING)
         .attr("font-size", 14)
         .attr("font-weight", 600)
-        .attr("fill", (d, i) => i == 0 ? "#00000080": "#ffffff80")
+        .attr("fill", (d, i) => i == 0 ? "#000000b0": "#ffffffb0")
         .text((d, i) => i)
     g.append("text")
         .attr("x", 51 + PADDING)
         .attr("y", (d, i) => (i + 1) * LINE_HEIGHT + bbox.bottom - 1 + PADDING)
         .attr("i18n", (d, i) => `level${i}`)
         .attr("font-size", 13)
-        .text((d) => d)
+        .text((d, i) => UI._(`level${i}`))
+}
+
+function switchLegend(option) {
+    let legend = document.querySelector("#legend");
+    if (legend) {
+        legend.outerHTML = "";
+    }
+    if (option == "small") {
+        addSmallLevelsLegend()
+    } else if (option == "big") {
+        addBigLevelsLegend()
+    }
+    updateHash();
 }
 
 var timerId = null, cancelInertial = false;
@@ -697,6 +747,7 @@ function updateHash() {
     const rot = projection.rotate()
     const levelBigNumber = encodeLevels()
     const lang = document.querySelector("#lang").value;
+    const legend = document.querySelector("#legend-style");
 
     let hashs = {};
     if (projId != 0) {
@@ -714,6 +765,9 @@ function updateHash() {
     if (lang != "en") {
         hashs.la = lang;
     }
+    if (legend && legend.value != "small") {
+        hashs.le = legend.value;
+    }
     window.location = encodeQuery("#", hashs);
     return hashs;
 }
@@ -730,6 +784,7 @@ function readHash() {
         "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
         "lvl": decodeLevels(hash.l || "0"),
         "locale": hash.la || (supports.indexOf(lang_set) >= 0 ? lang_set : "en"),
+        "legend": hash.le || "small",
     }
 }
 

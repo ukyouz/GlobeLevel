@@ -32,6 +32,13 @@
 <div class="inputs bottom-right">
     <input type="checkbox" name="displayOptions" id="displayOptions" class="hidden-box">
     <div>
+        <div>
+            <select name="legend-style" id="legend-style" class="btn" onchange="switchLegend(this.value)" title="Legend Style">
+                <option value="big" i18n="legend.big"></option>
+                <option value="small" i18n="legend.small" selected></option>
+                <option value="none" i18n="legend.none"></option>
+            </select>
+        </div>
         <select id="proj-select" class="btn" onchange="switchProjection(this.value)" title="select a projection">
             <option value="0" i18n="projection.orthographic"></option>
             <option value="1" i18n="projection.natural-earth"></option>

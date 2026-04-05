@@ -363,6 +363,14 @@ svg.node().addEventListener("pointermove", function(ev) {
         prevDiff = curDiff;
     }
 })
+svg.node().addEventListener("pointerleave", function(ev) {
+    const index = evCache.findIndex(
+        (cachedEv) => cachedEv.pointerId === ev.pointerId,
+    );
+    if (index >= 0) {
+        evCache.splice(index, 1);
+    }
+})
 svg.node().addEventListener("pointerup", function(ev) {
   // Remove this event from the target's cache
   const index = evCache.findIndex(

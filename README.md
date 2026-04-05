@@ -20,9 +20,9 @@ The 199 regions chosen in the world is based on the following rules:
 
 - 193: [Member states of the United Nations](https://www.un.org/en/about-us/member-states)
 - 3: The regions and the main land are separated by other sovereign states.
-    - Greenland (Denmark)
-    - New Caledonia (France)
-    - Guyane (France)
+    - Greenland
+    - New Caledonia
+    - Guyane
 - 3: Chosen for personal reason.
     - Antarctica
     - Taiwan

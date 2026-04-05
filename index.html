@@ -47,7 +47,8 @@
                 <option value="4" i18n="projection.azimuthal-equal-area"></option>
             </select>
         </div>
-        <label for="showLabel" class="btn"><input type="checkbox" id="showLabel" checked onchange="toggleLabel(this.checked)"/><span i18n="show-labels"></span></label>
+        <label for="showFlag" class="btn"><input type="checkbox" id="showFlag" onchange="toggleRegionStyle(this.checked)"/><span i18n="show-flags"></span></label>
+        <label for="showLabel" class="btn"><input type="checkbox" id="showLabel" checked onchange="toggleRegionStyle(this.checked)"/><span i18n="show-labels"></span></label>
         <label for="showGraticule" class="btn"><input type="checkbox" id="showGraticule" onchange="toggleGraticule(this.checked)"/><span i18n="show-graticule"></span></label>
     </div>
     <select name="lang" id="lang" class="btn" onchange="translateUI(this.value)">

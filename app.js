@@ -54,6 +54,7 @@ let LANGS = {
         "level5": "Lived there",
         "set-name": "Set Name",
         "screenshot": "Screenshot",
+        "show-flags": "Flags",
         "show-labels": "Labels",
         "show-graticule": "Graticules",
         "confirm-clear-levels": "Are you sure to clear all level colors?",
@@ -94,6 +95,7 @@ class Lang {
 let UI = new Lang("en");
 let links = {};
 
+const FLAG_HEIGHT = 10;
 const INIT_SCALE = 50;
 const INIT_K = 8, MIN_K = 1, MAX_K = 159;
 const INIT_FONTSIZE = 13;
@@ -161,6 +163,8 @@ d3.json("map/map.topojson", function (world) {
     var sortedFeatures = countries.features.slice().sort(function (a, b) {
         return d3.geoArea(b) - d3.geoArea(a);
     });
+
+    let loadedImgQnt = 0;
     nodes = group.append("g").attr("class", "labels").selectAll("g").data(sortedFeatures).enter()
         .append("g").each(function (d) {
             UI.setArea(d.id, d.id);
@@ -173,6 +177,26 @@ d3.json("map/map.topojson", function (world) {
                 .attr("stroke", "white")
                 .attr("stroke-width", "2")
             fg.attr("class", "place place-label")
+
+            d3.select(this).append("image").each(function(d) {
+                d3.select(this)
+                    .attr("class", "place-flag")
+                    .attr("href", `flags/${d.id}.webp`)
+                    .attr("data-height", FLAG_HEIGHT + 2)  // add margin to height
+                    .attr("height", FLAG_HEIGHT)
+                    .on("click", function(d) {onRegionClicked(d.id)})
+                const img = new Image();
+                img.src = `flags/${d.id}.webp`
+                img.onload = () => {
+                    let width = img.naturalWidth * FLAG_HEIGHT / img.naturalHeight;
+                    d3.select(this)
+                        .attr("width", width)
+                        .attr("data-width", width + 2)  // add margin to image
+                    if (loadedImgQnt == sortedFeatures.length) {
+                        arrangeLabels();
+                    }
+                }
+            })
         })
 
     addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
@@ -185,8 +209,8 @@ d3.json("map/map.topojson", function (world) {
     onzoom(k)
     document.querySelector("#proj-select").value = projId;
     translateUI(locale);
-    updateLabelBBox();
     draw();
+    updateLabelBBox();
     arrangeLabels();
     addSmallLevelsLegend();
 });
@@ -214,6 +238,9 @@ function addShadowLabel(group, position, fontSize, text = "") {
         .attr("y", position[1] || 0)
         .attr("font-size", fontSize)
         .text(text)
+    // var b = bg.node().getBoundingClientRect();
+    // bg.attr("data-width", b.width + 4)
+    //     .attr("data-height", b.height + 4)
     return { fg, bg };
 }
 
@@ -399,15 +426,36 @@ svg.call(d3.drag()
 
 
 function draw() {
+    const showLabel = document.querySelector("#showLabel").checked;
+    const showFlag = document.querySelector("#showFlag").checked;
+    const offsetY = (showFlag && showLabel) ? 5 : 0;
+
     svg.selectAll("path").attr("d", path);
     svg.selectAll("text.place").each(function (d) {
         var c = cachedLabelCentroid(d, true);
         d3.select(this)
             .attr("x", isNaN(c[0]) ? 0 : c[0])
-            .attr("y", isNaN(c[1]) ? 0 : c[1])
+            .attr("y", isNaN(c[1]) ? 0 : c[1] + offsetY)
             .selectAll("tspan")
             .attr("x", isNaN(c[0]) ? 0 : c[0])
     })
+    svg.selectAll("image.place-flag")
+        .each(function(d) {
+            var c = cachedLabelCentroid(d);
+            var width = this.attributes.width?.value || 16;
+            var height = this.attributes.height.value;
+            const offsetY = (showLabel && showFlag) ? height * 1.8 : height * 0.8;
+            d3.select(this)
+                .attr("x", isNaN(c[0]) ? 0 : c[0] - width / 2)
+                .attr("y", isNaN(c[1]) ? 0 : c[1] - offsetY)
+        })
+
+    svg.selectAll("text.place")
+        .attr("shown", null)
+        .style("display", null);
+    svg.selectAll("image.place-flag")
+        .attr("shown", null)
+        .style("display", null);
 }
 
 let evCache = [];
@@ -511,6 +559,8 @@ function onzoom(scale) {
 }
 
 function updateLabelBBox() {
+    const showFlag = document.querySelector("#showFlag").checked;
+    const extraHeight = showFlag ? FLAG_HEIGHT : 0;
     svg.selectAll("text.place-outline").each(function(d){
         var b = this.getBoundingClientRect();
         if (b.width <= 0 || b.height <= 0) {
@@ -518,22 +568,20 @@ function updateLabelBBox() {
         }
         d3.select(this)
             .attr("data-width", b.width + 4)
-            .attr("data-height", b.height + 4)
+            .attr("data-height", b.height + 4 + extraHeight)
     })
 }
 
 function arrangeLabels() {
-    // Reset all to visible first — getBBox() throws on display:none elements in Chrome
-    svg.selectAll("text.place")
-        .attr("shown", "true")
-        .style("display", null);
+    const showLabel = document.querySelector("#showLabel").checked;
+    const showFlag = document.querySelector("#showFlag").checked;
 
     var shown = [];
-    svg.selectAll("text.place-outline")
+    let targetElem = showLabel ? "text.place-outline" : "image.place-flag";
+    svg.selectAll(targetElem)
         .each(function (d) {
             const geo = cachedLabelCentroid(d);
             var isShown = true;
-            if (d3.select(this).attr("disabled") == "true") isShown = false;
             if (isNaN(geo[0])) isShown = false;
 
             var b = {
@@ -542,11 +590,14 @@ function arrangeLabels() {
             };
             b.x = geo[0] - b.width / 2;
             b.y = geo[1] - b.height / 2;
-            for (var i = 0; i < shown.length; i++) {
-                var s = shown[i];
-                if (b.x < s.x + s.width && b.x + b.width > s.x &&
-                    b.y < s.y + s.height && b.y + b.height > s.y) {
-                    isShown = false; // Hide if overlaps a higher-priority label
+
+            if (isShown) {
+                for (var i = 0; i < shown.length; i++) {
+                    var s = shown[i];
+                    if (b.x < s.x + s.width && b.x + b.width > s.x &&
+                        b.y < s.y + s.height && b.y + b.height > s.y) {
+                        isShown = false; // Hide if overlaps a higher-priority label
+                    }
                 }
             }
 
@@ -555,21 +606,32 @@ function arrangeLabels() {
                 .style("display", function (d) {
                     if (!isShown) return "none"
                     // Store a plain object copy (not a live DOMRect)
-                    shown.push({ x: b.x, y: b.y, width: b.width, height: b.height });
+                    shown.push(b);
                     return null; // Show (remove inline style override)
                 });
         })
-    svg.selectAll("text.place-outline[shown=false] ~ text.place-label")
+    svg.selectAll("[shown=true] ~ text.place-label")
+        .style("display", null)
+    svg.selectAll("[shown=true] ~ image.place-flag")
+        .style("display", null)
+    svg.selectAll("[shown=false] ~ text.place-label")
         .style("display", "none")
+    svg.selectAll("[shown=false] ~ image.place-flag")
+        .style("display", "none")
+
+    if (!showLabel) {
+        svg.selectAll("text.place")
+            .style("display", "none");
+    }
+    if (!showFlag) {
+        svg.selectAll("image.place-flag")
+            .style("display", "none")
+    }
 }
 
-function toggleLabel(show) {
-    if (!show) {
-        svg.selectAll("text.place").attr("disabled", "true");
-    } else {
-        svg.selectAll("text.place").attr("disabled", null);
-    }
-    arrangeLabels()
+function toggleRegionStyle(value) {
+    draw();
+    arrangeLabels();
 }
 
 function toggleGraticule(show) {

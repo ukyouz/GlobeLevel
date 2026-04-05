@@ -115,6 +115,10 @@ svg text.place-label:hover {
     stroke: var(--link-hover-color);
 }
 
+svg image.place-flag:hover {
+    outline: 1px solid var(--link-hover-color);
+}
+
 svg path {
     cursor: move;
     /* fallback if grab cursor is unsupported */
@@ -124,6 +128,7 @@ svg path {
 }
 
 svg text.place,
+svg image.place-flag,
 svg path[id] {
     cursor: pointer;
 }

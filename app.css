@@ -14,6 +14,10 @@ body {
     height: 100%;
     font-family: sans-serif;
     touch-action: pan-x pan-y; /* Allows scrolling but disables pinch-zoom */
+    user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
 }
 
 .nav-group {
@@ -359,6 +363,10 @@ svg path[id][levelcolor=blue]:hover {
 
 .inputs .btn {
     cursor: pointer;
+}
+
+.inputs .btn.is-danger {
+    color: #e84c3d;
 }
 
 .inputs select {

@@ -33,19 +33,20 @@
     <input type="checkbox" name="displayOptions" id="displayOptions" class="hidden-box">
     <div>
         <div>
+            <a class="btn is-danger" id="clearLevels" onclick="clearLevels()" title="Clear Levels"><i class="fa-solid fa-eraser"></i></a>
             <select name="legend-style" id="legend-style" class="btn" onchange="switchLegend(this.value)" title="Legend Style">
                 <option value="big" i18n="legend.big"></option>
                 <option value="small" i18n="legend.small" selected></option>
                 <option value="none" i18n="legend.none"></option>
             </select>
+            <select id="proj-select" class="btn" onchange="switchProjection(this.value)" title="select a projection">
+                <option value="0" i18n="projection.orthographic"></option>
+                <option value="1" i18n="projection.natural-earth"></option>
+                <option value="2" i18n="projection.equirectangular"></option>
+                <option value="3" i18n="projection.mercator"></option>
+                <option value="4" i18n="projection.azimuthal-equal-area"></option>
+            </select>
         </div>
-        <select id="proj-select" class="btn" onchange="switchProjection(this.value)" title="select a projection">
-            <option value="0" i18n="projection.orthographic"></option>
-            <option value="1" i18n="projection.natural-earth"></option>
-            <option value="2" i18n="projection.equirectangular"></option>
-            <option value="3" i18n="projection.mercator"></option>
-            <option value="4" i18n="projection.azimuthal-equal-area"></option>
-        </select>
         <label for="showLabel" class="btn"><input type="checkbox" id="showLabel" checked onchange="toggleLabel(this.checked)"/><span i18n="show-labels"></span></label>
         <label for="showGraticule" class="btn"><input type="checkbox" id="showGraticule" onchange="toggleGraticule(this.checked)"/><span i18n="show-graticule"></span></label>
     </div>
@@ -59,7 +60,6 @@
     <div>
         <div class="btn" onclick="setAuthor();" i18n="set-name"></div>
         <a class="btn" target="_blank" id="saveAsImage" onclick="saveAsImage(this)" download="globe.png"><i class="fa-solid fa-camera"></i> <span i18n="screenshot"></span></a>
-        <a class="btn" id="clearLevels" onclick="clearLevels()" title="Clear Levels"><i class="fa-solid fa-eraser"></i></a>
     </div>
 </div>
 <script src="https://d3js.org/d3.v4.min.js"></script>

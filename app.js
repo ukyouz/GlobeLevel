@@ -208,6 +208,22 @@ class Locale extends Hashable {
 //     }
 // }
 
+class Author extends Hashable {
+    get default() {return ""}
+    get tag() {return "n"}
+    currentValue() {
+        let obj = document.querySelector("#author");
+        return obj?.querySelector("text").textContent || "";
+    }
+    initUi(val) {
+        let obj = document.querySelector("#author");
+        if (obj) {
+            obj.outerHTML = "";
+        }
+        addShadowLabel(group.append("g").attr("id", "author"), [16, height - 32], 32, val);
+    }
+}
+
 let hashMap = {
     "projId": new ProjectionId(),
     "k": new Scaling(),
@@ -216,6 +232,7 @@ let hashMap = {
     "label": new LabelStyle(),
     "locale": new Locale(),
     // "legend": new LegendStyle(),
+    "name": new Author(),
 }
 function readHash() {
     let hashObj = {}
@@ -328,9 +345,6 @@ d3.json("map/map.topojson", function (world) {
     for (const [key, val] of Object.entries(hashs)) {
         hashMap[key].initUi(val)
     }
-
-    params = parseQuery(window.location.search);
-    addShadowLabel(group, [16, height - 32], 32, params.t || "");
 
     draw();
     updateLabelBBox();
@@ -1021,10 +1035,11 @@ function clearLevels() {
 }
 
 function setAuthor() {
-    p = parseQuery(window.location.search);
-    answer = prompt(UI._("ask-for-name"), p.t);
+    let name = hashMap["name"].currentValue();
+    answer = prompt(UI._("ask-for-name"), name);
     if (answer != null) {
-        window.location.search = "t=" + encodeURI(answer);
+        hashMap["name"].initUi(answer)
+        updateHash();
     }
 }
 

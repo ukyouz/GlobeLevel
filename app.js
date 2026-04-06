@@ -110,6 +110,7 @@ var projectionIndex = 0;
 var projection = PROJECTIONS[0].scale(INIT_SCALE).translate([width / 2, height / 2]);
 var path = d3.geoPath().projection(projection);
 var lastZoomK = MIN_K;
+var levels = {};
 
 d3.json("map/map.topojson", function (world) {
     console.log(world)
@@ -575,6 +576,7 @@ function updateLabelBBox() {
 function arrangeLabels() {
     const showLabel = document.querySelector("#showLabel").checked;
     const showFlag = document.querySelector("#showFlag").checked;
+    const showHint = document.querySelector("#regionHint").checked;
 
     var shown = [];
     let targetElem = showLabel ? "text.place-outline" : "image.place-flag";
@@ -583,6 +585,7 @@ function arrangeLabels() {
             const geo = cachedLabelCentroid(d);
             var isShown = true;
             if (isNaN(geo[0])) isShown = false;
+            if (!(showHint || levels[d.id] > 0)) isShown = false;
 
             var b = {
                 width: parseInt(this.dataset.width),
@@ -642,6 +645,10 @@ function toggleGraticule(show) {
     }
 }
 
+function toggleHint(show) {
+    draw();
+    arrangeLabels();
+}
 
 // For MultiPolygon features, centroid may fall outside all polygons (e.g. USA, Russia).
 // Find the largest sub-polygon, compute its geographic centroid, then project that
@@ -766,8 +773,11 @@ function setCountryLevel(id, level) {
         .attr("levelcolor", levelColorNames[level])
         .attr("level", level)
         .attr("fill", levelColors[level]);
+    levels[id] = level;
     updateHash();
     updateTitle();
+    draw();
+    arrangeLabels();
 }
 document.addEventListener("click", function(e) {
     // console.log(e.target)

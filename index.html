@@ -57,6 +57,8 @@
         <option value="tw">繁體中文</option>
         <option value="ja">日本語</option>
     </select>
+    <input type="checkbox" name="regionHint" id="regionHint" onchange="toggleHint(this.checked)" class="hidden-box">
+    <label class="btn" title="Region Hint" for="regionHint"><i class="fa-solid fa-lightbulb"></i></label>
     <label class="btn" title="Display Options" for="displayOptions"><i class="fa-solid fa-gear"></i></label>
     <div>
         <div class="btn" onclick="setAuthor();" i18n="set-name"></div>

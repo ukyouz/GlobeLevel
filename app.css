@@ -227,12 +227,16 @@ input.hidden-box {
 input.hidden-box + div {
     display: none;
 }
-.inputs input.hidden-box:checked + div,
+.inputs input[name=displayOptions]:checked + div,
 .form.has-external input.hidden-box:checked + div {
     display: block;
 }
-.inputs input.hidden-box:checked ~ label[for] {
+.inputs input[name=displayOptions]:checked ~ label[for=displayOptions] {
     color: var(--link-hover-color);
+}
+.inputs input[name=regionHint]:checked ~ label[for=regionHint] {
+    background: #f9d247;
+    color: #d58337;
 }
 
 .form .links a {

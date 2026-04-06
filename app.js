@@ -112,9 +112,133 @@ var path = d3.geoPath().projection(projection);
 var lastZoomK = MIN_K;
 var levels = {};
 
+class Hashable {
+    get default() {return 0}
+    get tag() {console.error("please implant this")}
+    currentValue() {console.error("please implant this")}
+    fromHash(val) {return val || this.default}
+    toHash(val) {return val}
+    initUi(val) {}
+}
+
+class ProjectionId extends Hashable {
+    constructor() {
+        super()
+        this.obj = document.querySelector("#proj-select")
+    }
+    get tag() {return "p"}
+    currentValue() {return this.obj.value}
+    fromHash(val) {return parseInt(val || "0")}
+    initUi(val) {
+        this.obj.value = val,
+        switchProjection(val);
+    }
+}
+
+class Scaling extends Hashable {
+    get default() {return INIT_K}
+    get tag() {return "k"}
+    currentValue() {return lastZoomK}
+    fromHash(val) {return parseFloat(val || INIT_K)}
+    toHash(val) {return val.toFixed(1)}
+    initUi(val) {onzoom(val)}
+}
+
+class Rotation extends Hashable {
+    get default() {return "0.000,0.000"}
+    get tag() {return "rot"}
+    currentValue() {
+        let rot = projection.rotate();
+        return `${rot[0].toFixed(3)},${rot[1].toFixed(3)}`
+    }
+    fromHash(val) {
+        const rot = (val || "0.0,0.0").split(",")
+        return [parseFloat(rot[0]), parseFloat(rot[1])]
+    }
+    initUi(val) {projection.rotate([val[0], val[1], 0])}
+}
+
+class Levels extends Hashable {
+    get default() {return ""}
+    get tag() {return "l"}
+    currentValue() {return encodeLevels()}
+    fromHash(val) {return decodeLevels(val || "0")}
+}
+
+class LabelStyle extends Hashable {
+    get default() {return "l"}
+    get tag() {return "ls"}
+    currentValue() {
+        const showGraticule = document.querySelector("#showGraticule");
+        let style = ""
+        if (showLabel.checked) style += "l";
+        if (showFlag.checked) style += "f";
+        if (showGraticule.checked) style += "g";
+        return style;
+    }
+    initUi(val) {
+        showLabel.checked = val.indexOf("l") >= 0;
+        showFlag.checked = val.indexOf("f") >= 0;
+        showGraticule.checked = val.indexOf("g") >= 0;
+    }
+}
+
+const lang_selector = document.querySelector("#lang");
+const supports = Array.from(lang_selector.querySelectorAll("option"), e => e.value);
+const lang_set = window.navigator.language.split('-').pop().toLowerCase();
+
+class Locale extends Hashable {
+    get default() {return supports.indexOf(lang_set) >= 0 ? lang_set : "en"}
+    get tag() {return "la"}
+    currentValue() {return document.querySelector("#lang").value}
+    initUi(val) {translateUI(val)}
+}
+
+// class LegendStyle extends Hashable {
+//     constructor() {
+//         super()
+//         this.obj = document.querySelector("#legend-style");
+//     }
+//     get default() {return "small"}
+//     get tag() {return "le"}
+//     currentValue() {return this.obj.value}
+//     initUi(val) {
+//         this.obj.value = val
+//         switchLegend(val)
+//     }
+// }
+
+let hashMap = {
+    "projId": new ProjectionId(),
+    "k": new Scaling(),
+    "rot": new Rotation(),
+    "lvl": new Levels(),
+    "label": new LabelStyle(),
+    "locale": new Locale(),
+    // "legend": new LegendStyle(),
+}
+function readHash() {
+    let hashObj = {}
+    const hash = parseQuery(window.location.hash);
+    for (const [key, ins] of Object.entries(hashMap)) {
+        hashObj[key] = ins.fromHash(hash[ins.tag]);
+    }
+    return hashObj;
+}
+function updateHash() {
+    let hashs = {};
+    for (const [key, ins] of Object.entries(hashMap)) {
+        let val = ins.currentValue()
+        if (val != ins.default) {
+            hashs[ins.tag] = ins.toHash(val)
+        }
+    }
+    window.location = encodeQuery("#", hashs);
+}
+
 d3.json("map/map.topojson", function (world) {
     console.log(world)
-    const { projId, k, rot, lvl, locale } = readHash();
+    const hashs = readHash();
 
     // Ocean (sphere background)
     group.append("path")
@@ -155,8 +279,8 @@ d3.json("map/map.topojson", function (world) {
                 .attr("fill", "#fff")
                 .on("click", function (d) { onRegionClicked(d.id) })
                 .on("dblclick", function () { d3.event.stopPropagation() })
-            if (lvl[index]) {
-                setCountryLevel(d.id, lvl[index]);
+            if (hashs.lvl[index]) {
+                setCountryLevel(d.id, hashs.lvl[index]);
             }
         })
 
@@ -199,17 +323,15 @@ d3.json("map/map.topojson", function (world) {
                 }
             })
         })
+    addTitleLabel(group.append("g").attr("id", "level"), hashs.lvl.reduce((a, b) => a + b));
 
-    addTitleLabel(group.append("g").attr("id", "level"), lvl.reduce((a, b) => a + b));
+    for (const [key, val] of Object.entries(hashs)) {
+        hashMap[key].initUi(val)
+    }
 
     params = parseQuery(window.location.search);
     addShadowLabel(group, [16, height - 32], 32, params.t || "");
 
-    projection.rotate([rot[0], rot[1], 0])
-    switchProjection(projId);
-    onzoom(k)
-    document.querySelector("#proj-select").value = projId;
-    translateUI(locale);
     draw();
     updateLabelBBox();
     arrangeLabels();
@@ -343,7 +465,7 @@ function switchLegend(option) {
     } else if (option == "big") {
         addBigLevelsLegend()
     }
-    updateHash();
+    // updateHash();
 }
 
 var timerId = null, cancelInertial = false;
@@ -426,10 +548,14 @@ svg.call(d3.drag()
 );
 
 
+const showLabel = document.querySelector("#showLabel");
+const showFlag = document.querySelector("#showFlag");
+const showHint = document.querySelector("#regionHint");
+
 function draw() {
-    const showLabel = document.querySelector("#showLabel").checked;
-    const showFlag = document.querySelector("#showFlag").checked;
-    const offsetY = (showFlag && showLabel) ? 5 : 0;
+    const isShowLabel = showLabel.checked;
+    const isShowFlag = showFlag.checked;
+    const offsetY = (isShowFlag && isShowLabel) ? 5 : 0;
 
     svg.selectAll("path").attr("d", path);
     svg.selectAll("text.place").each(function (d) {
@@ -445,7 +571,7 @@ function draw() {
             var c = cachedLabelCentroid(d);
             var width = this.attributes.width?.value || 16;
             var height = this.attributes.height.value;
-            const offsetY = (showLabel && showFlag) ? height * 1.8 : height * 0.8;
+            const offsetY = (isShowLabel && isShowFlag) ? height * 1.8 : height * 0.8;
             d3.select(this)
                 .attr("x", isNaN(c[0]) ? 0 : c[0] - width / 2)
                 .attr("y", isNaN(c[1]) ? 0 : c[1] - offsetY)
@@ -560,8 +686,8 @@ function onzoom(scale) {
 }
 
 function updateLabelBBox() {
-    const showFlag = document.querySelector("#showFlag").checked;
-    const extraHeight = showFlag ? FLAG_HEIGHT : 0;
+    const isShowFlag = showFlag.checked;
+    const extraHeight = isShowFlag ? FLAG_HEIGHT : 0;
     svg.selectAll("text.place-outline").each(function(d){
         var b = this.getBoundingClientRect();
         if (b.width <= 0 || b.height <= 0) {
@@ -574,9 +700,9 @@ function updateLabelBBox() {
 }
 
 function arrangeLabels() {
-    const showLabel = document.querySelector("#showLabel").checked;
-    const showFlag = document.querySelector("#showFlag").checked;
-    const showHint = document.querySelector("#regionHint").checked;
+    const isShowLabel = showLabel.checked;
+    const isShowFlag = showFlag.checked;
+    const isShowHint = showHint.checked;
 
     var shown = [];
     let targetElem = showLabel ? "text.place-outline" : "image.place-flag";
@@ -585,7 +711,7 @@ function arrangeLabels() {
             const geo = cachedLabelCentroid(d);
             var isShown = true;
             if (isNaN(geo[0])) isShown = false;
-            if (!(showHint || levels[d.id] > 0)) isShown = false;
+            if (!(isShowHint || levels[d.id] > 0)) isShown = false;
 
             var b = {
                 width: parseInt(this.dataset.width),
@@ -622,11 +748,11 @@ function arrangeLabels() {
     svg.selectAll("[shown=false] ~ image.place-flag")
         .style("display", "none")
 
-    if (!showLabel) {
+    if (!isShowLabel) {
         svg.selectAll("text.place")
             .style("display", "none");
     }
-    if (!showFlag) {
+    if (!isShowFlag) {
         svg.selectAll("image.place-flag")
             .style("display", "none")
     }
@@ -635,6 +761,7 @@ function arrangeLabels() {
 function toggleRegionStyle(value) {
     draw();
     arrangeLabels();
+    updateHash();
 }
 
 function toggleGraticule(show) {
@@ -643,6 +770,7 @@ function toggleGraticule(show) {
     } else {
         svg.selectAll("path.graticule").attr("display", null);
     }
+    updateHash();
 }
 
 function toggleHint(show) {
@@ -806,57 +934,10 @@ window.addEventListener("resize", function(ev) {
 })
 
 function updateTitle() {
-    const hashs = readHash();
     const title = document.querySelector("#level");
     if (title) {
         title.innerHTML = "";
-        addTitleLabel(d3.select(title), hashs.lvl.reduce((a, b) => a + b));
-    }
-}
-
-function updateHash() {
-    const projId = document.querySelector("#proj-select").value;
-    const rot = projection.rotate()
-    const levelBigNumber = encodeLevels()
-    const lang = document.querySelector("#lang").value;
-    const legend = document.querySelector("#legend-style");
-
-    let hashs = {};
-    if (projId != 0) {
-        hashs.p = projId;
-    }
-    if (lastZoomK != INIT_K) {
-        hashs.k = lastZoomK.toFixed(1);
-    }
-    if (rot[0] != 0 || rot[1] != 0) {
-        hashs.r = `${rot[0].toFixed(3)},${rot[1].toFixed(3)}`;
-    }
-    if (levelBigNumber) {
-        hashs.l = levelBigNumber;
-    }
-    if (lang != "en") {
-        hashs.la = lang;
-    }
-    if (legend && legend.value != "small") {
-        hashs.le = legend.value;
-    }
-    window.location = encodeQuery("#", hashs);
-    return hashs;
-}
-
-const lang_selector = document.querySelector("#lang");
-const supports = Array.from(lang_selector.querySelectorAll("option"), e => e.value);
-const lang_set = window.navigator.language.split('-').pop().toLowerCase();
-function readHash() {
-    const hash = parseQuery(window.location.hash);
-    const rot = (hash.r != undefined ? hash.r : "0.0,0.0").split(",")
-    return {
-        "projId": parseInt(hash.p != undefined ? hash.p : "0"),
-        "k": parseFloat(hash.k != undefined ? hash.k : `${INIT_K}`),
-        "rot": [parseFloat(rot[0]), parseFloat(rot[1])],
-        "lvl": decodeLevels(hash.l || "0"),
-        "locale": hash.la || (supports.indexOf(lang_set) >= 0 ? lang_set : "en"),
-        "legend": hash.le || "small",
+        addTitleLabel(d3.select(title), Object.values(levels).reduce((a, b) => a + b, 0));
     }
 }
 

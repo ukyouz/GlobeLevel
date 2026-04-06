@@ -648,6 +648,12 @@ svg.node().addEventListener("pointerup", function(ev) {
 function clamp(val, min, max) {
     return Math.min(max, Math.max(min, val));
 }
+let updateHashTimer = null;
+function lazyUpdateHash() {
+    return setTimeout(function() {
+        updateHash()
+    }, 500)
+}
 let baseDeltaY = 0;
 window.addEventListener("wheel", function(ev) {
     if (ev.ctrlKey) {
@@ -680,7 +686,10 @@ window.addEventListener("wheel", function(ev) {
     draw();
     arrangeLabels();
     arrangePopup();
-    updateHash();
+    if (updateHashTimer) {
+        clearTimeout(updateHashTimer)
+    }
+    updateHashTimer = lazyUpdateHash();
 
 }, {"passive": false})
 

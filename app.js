@@ -203,15 +203,15 @@ function addTitleLabel(d3Node, lvl) {
 
 function addShadowLabel(group, position, fontSize, text = "") {
     let bg = group.append("text")
-        .attr("x", position[0])
-        .attr("y", position[1])
+        .attr("x", position[0] || 0)
+        .attr("y", position[1] || 0)
         .attr("font-size", fontSize)
         .text(text)
         .attr("stroke", "white")
         .attr("stroke-width", "4")
     let fg = group.append("text")
-        .attr("x", position[0])
-        .attr("y", position[1])
+        .attr("x", position[0] || 0)
+        .attr("y", position[1] || 0)
         .attr("font-size", fontSize)
         .text(text)
     return { fg, bg };

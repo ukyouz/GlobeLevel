@@ -1050,13 +1050,15 @@ function clearLevels() {
     let result = confirm(UI._("confirm-clear-levels"));
     if (!result) return;
 
-    const hashs = readHash();
-    window.location.hash = encodeQuery("#", {
-        p: hashs.projId,
-        k: hashs.k,
-        r: hashs.rot,
-    });
-    window.location.reload();
+    levels = {};
+    svg.selectAll(".node path")
+        .attr("levelcolor", null)
+        .attr("level", null)
+        .attr("fill", "white")
+    updateHash();
+    updateTitle();
+    draw();
+    arrangeLabels();
 }
 
 function setAuthor() {

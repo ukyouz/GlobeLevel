@@ -253,12 +253,13 @@ function updateHash() {
     window.location = encodeQuery("#", hashs);
 }
 
+let earthRadius = 0;
 d3.json("map/map.topojson", function (world) {
     console.log(world)
     const hashs = readHash();
 
     // Ocean (sphere background)
-    group.append("path")
+    let ocean = group.append("path")
         .datum({ type: "Sphere" })
         .attr("class", "sphere")
         .attr("d", path)
@@ -266,6 +267,8 @@ d3.json("map/map.topojson", function (world) {
         .attr("stroke", "#d1e3ff")
         .attr("stroke-width", "4")
         .on("dblclick", function () { d3.event.stopPropagation() })
+    let bbox = ocean.node().getBoundingClientRect();
+    earthRadius = bbox.height / 2;
 
     // ── GRATICULE (grid lines, drawn last = on top) ────────────────
     group.append("path")
@@ -549,7 +552,7 @@ var inertia = d3.inertiaHelper({
         if (t >= 1.0)
             updateHash();
     },
-    time: 1700,
+    time: 1000,
 });
 svg.call(d3.drag()
     .filter(() => {
@@ -670,14 +673,15 @@ window.addEventListener("wheel", function(ev) {
     }
 
     // also rotate to cursor position
-    let v0 = versor.cartesian(projection.invert([ev.clientX, ev.clientY]));
+    let cursorPos = attachToEarth([ev.clientX, ev.clientY])
+    let v0 = versor.cartesian(projection.invert(cursorPos));
     let q0 = versor(projection.rotate());
     if (ev.deltaY < 0) {
         onzoom(clamp(Math.pow(2, -ev.deltaY / baseDeltaY / 128), 1, 2))
     } else if (ev.deltaY > 0) {
         onzoom(clamp(Math.pow(0.5, ev.deltaY / baseDeltaY / 128), 0.5, 1))
     }
-    let v1 = versor.cartesian(projection.invert([ev.clientX, ev.clientY]));
+    let v1 = versor.cartesian(projection.invert(cursorPos));
     let q1 = versor.multiply(q0, versor.delta(v0, v1))
     let r1 = versor.rotation(q1);
     projection.rotate([r1[0], r1[1], 0])
@@ -692,6 +696,17 @@ window.addEventListener("wheel", function(ev) {
     updateHashTimer = lazyUpdateHash();
 
 }, {"passive": false})
+
+function attachToEarth([x, y]) {
+    let centerDir = [width / 2 - x, height / 2 - y];
+    let cursorDist = Math.hypot(centerDir[0], centerDir[1]);
+    let ratio = 1 - 0.8 * earthRadius * lastZoomK / cursorDist;
+    if (ratio > 0) {
+        return [x + centerDir[0] * ratio, y + centerDir[1] * ratio];
+    } else {
+        return [x, y];
+    }
+}
 
 function onzoom(scale) {
     let k = clamp(lastZoomK * scale, MIN_K, MAX_K);

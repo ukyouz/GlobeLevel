@@ -251,6 +251,7 @@ function updateHash() {
         }
     }
     window.location = encodeQuery("#", hashs);
+    clearImage();
 }
 
 let earthRadius = 0;
@@ -1067,22 +1068,33 @@ function setAuthor() {
     }
 }
 
-function toDataURL(width, height) {
+function toDataURL(width, height, cb) {
     var svgString = new XMLSerializer().serializeToString(document.querySelector('svg'));
     var canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
-    canvg(canvas, svgString);
-    return canvas.toDataURL("image/png");
+    canvg(canvas, svgString, {
+        renderCallback: function(d) {
+            cb(canvas.toDataURL("image/png"))
+        },
+    });
 }
 
 function saveAsImage(elem) {
-    const svg = document.querySelector("svg");
+    // const svg = document.querySelector("svg");
     const dpi = window.devicePixelRatio;
-    var png = toDataURL(width * dpi, height * dpi);
-    elem.setAttribute('href', png);
-    // window.open(png, 'japanex.png');
+    const label = elem.querySelector("[i18n]");
+    toDataURL(width * dpi, height * dpi, function(png) {
+        elem.setAttribute('href', png);
+        label.innerHTML = "Download"
+    });
 };
+function clearImage() {
+    const elem = document.querySelector("#saveAsImage")
+    const label = elem.querySelector("[i18n]");
+    elem.removeAttribute("href");
+    label.innerHTML = UI._(label.attributes.i18n.value)
+}
 
 async function loadData(path, callback) {
     try {

@@ -2,7 +2,7 @@
     "globe-level": "制地等級",
     "about": "關於{globe-level}",
     "level0": "沒去過",
-    "level1": "通過（路過）",
+    "level1": "通過（路過、飛越等）",
     "level2": "接地（休息、換車等）",
     "level3": "訪問（遊玩過）",
     "level4": "宿泊（住宿過）",

@@ -282,10 +282,10 @@ d3.json("map/map.topojson", function (world) {
       .attr("stroke-width", 0.5)
       .attr("opacity", 0.5);
 
-    var countries = topojson.feature(world, world.objects.collection);
+    var regions = topojson.feature(world, world.objects.collection);
 
     // Areas
-    var nodes = group.append("g").attr("class", "areas").selectAll("g").data(countries.features).enter()
+    var nodes = group.append("g").attr("class", "areas").selectAll("g").data(regions.features).enter()
         .each(function (d, index) {
             d3.select(this)
                 .append("g")
@@ -305,8 +305,8 @@ d3.json("map/map.topojson", function (world) {
             }
         })
 
-    // country labels — sorted by area descending so larger countries have higher priority
-    var sortedFeatures = countries.features.slice().sort(function (a, b) {
+    // country labels — sorted by area descending so larger regions have higher priority
+    var sortedFeatures = regions.features.slice().sort(function (a, b) {
         return d3.geoArea(b) - d3.geoArea(a);
     });
 

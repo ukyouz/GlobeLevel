@@ -37,7 +37,12 @@ const RTL_REGIONS = [
     "Syria",
     "Tunisia",
     "United Arab Emirates",
+    "Western Sahara",
     "Yemen",
+]
+const DISPUTED_REGIONS = [
+    "Palestine",
+    "Western Sahara",
 ]
 const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
 const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];
@@ -297,7 +302,9 @@ d3.json("map/map.topojson", function (world) {
                 })
                 .attr("stroke", "black")
                 .attr("stroke-linejoin", "round")
-                .attr("fill", "#fff")
+                .attr("stroke-dasharray", (d) => DISPUTED_REGIONS.indexOf(d.id) >= 0 ? "4 2": null)
+                // .attr("stroke-opacity", (d) => DISPUTED_REGIONS.indexOf(d.id) >= 0 ? 0.5: null)
+                .attr("fill", (d) => DISPUTED_REGIONS.indexOf(d.id) >= 0 ? "transparent": "#fff")
                 .on("click", function (d) { onRegionClicked(d.id) })
                 .on("dblclick", function () { d3.event.stopPropagation() })
             if (hashs.lvl[index]) {
@@ -939,7 +946,7 @@ function setCountryLevel(id, level) {
     svg.selectAll(".node path").filter(function (d) { return d.id === id; })
         .attr("levelcolor", levelColorNames[level])
         .attr("level", level)
-        .attr("fill", levelColors[level]);
+        .attr("fill", DISPUTED_REGIONS.indexOf(id) >= 0 && level == 0 ? "transparent": levelColors[level]);
     levels[id] = level;
     updateHash();
     updateTitle();

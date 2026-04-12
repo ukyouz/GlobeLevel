@@ -43,6 +43,7 @@ const RTL_REGIONS = [
 const DISPUTED_REGIONS = [
     "Palestine",
     "Western Sahara",
+    "Crimea",
 ]
 const levelColorNames = ['white', 'blue', 'green', 'yellow', 'orange', 'red'];
 const levelColors = ['#ffffff', '#3598db', '#30cc70', '#f3c218', '#d58337', '#e84c3d'];

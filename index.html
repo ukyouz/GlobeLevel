@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"/>
     <link rel="stylesheet" href="app.css"/>
     <link rel="icon" href="earth.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="earth.png">
+    <meta name="theme-color" content="#000">
+    <meta name="msapplication-TileColor" content="#000">
+    <meta name="msapplication-TileImage" content="earth.png">
+    <meta name="og:url" content="https://zhung.com.tw/globe-level/">
+	<meta name="og:description" content="Global Level 制地等級。查看與分享您的環球等級！">
+    <meta property="og:url" content="https://zhung.com.tw/globe-level/">
+	<meta property="og:title" content="Globe Level 制地等級/制地レベル">
+	<meta property="og:description" content="Global Level 制地レベル。世界一周を目指せ！">
 </head>
 <body>
 <svg>
@@ -70,8 +79,17 @@
 <script src="https://cdn.jsdelivr.net/npm/d3-inertia@0.2"></script>
 <script src="https://unpkg.com/topojson-client@3"></script>
 <script src="canvg.js"></script>
-<script src="test/js/word_wrap.js"></script>
-<script src="test/js/versor.min.js"></script>
+<!-- <script src="test/js/word_wrap.js"></script> -->
+<!-- <script src="test/js/versor.min.js"></script> -->
 <script src="app.js"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W4X51GD2KF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-W4X51GD2KF');
+</script>
 </body>
 </html>
